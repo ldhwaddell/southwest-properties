@@ -1,0 +1,15 @@
+{'name': 'Luc Ouellet', 
+
+'title': ['Principal Planner', 'Planning and Development, Planned Growth', 'HRM Planning and Development', 'Strategic Projects', 'Halifax,', 'Nova Scotia,', 'B3J 3A5'],
+
+ 'department': ['Luc Ouellet', 'Principal Planner', 'Planning and Development, Planned Growth'], 
+ 
+ 'telephone': '902.717.4357', 
+ 
+ 'fax': None, 
+ 
+ 'email': 'ouellel@halifax.ca', 
+ 
+ 'mailing_address': '',
+ 
+  'attention': 'Attention:Luc Ouellet'}
