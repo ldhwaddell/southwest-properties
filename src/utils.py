@@ -1,11 +1,12 @@
 import functools
+import hashlib
 import logging
 import time
 from typing import Callable, Any
 
 import requests
 from fake_useragent import UserAgent
-from requests import Response, HTTPError
+from requests import Response
 
 
 def retry(retries: int, retry_sleep_sec: int) -> Callable[..., Any]:
@@ -56,3 +57,10 @@ def fetch(url: str) -> Response:
     res = requests.get(url, stream=True, headers=headers)
     res.raise_for_status()
     return res
+
+
+def generate_hash(s: str) -> str:
+    hasher = hashlib.sha256()
+    # Encode the string to bytes
+    hasher.update(s.encode("utf-8"))
+    return hasher.hexdigest()

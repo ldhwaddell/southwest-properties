@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, String
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -7,7 +7,7 @@ Base = declarative_base()
 
 class ActivePlanningApplications(Base):
     __tablename__ = "active_planning_applications"
-    id = Column(Integer, primary_key=True)
+    id = Column(String(64), primary_key=True)
     title = Column(String)
     summary = Column(String)
     last_updated = Column(String)
@@ -17,3 +17,4 @@ class ActivePlanningApplications(Base):
     process = Column(String)
     status = Column(String)
     contact_info = Column(String)
+    documents_submitted_for_evaluation = Column(String)

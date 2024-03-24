@@ -1,13 +1,15 @@
+import json
 import logging
 import random
-import re
 import time
 from typing import Optional, Dict, Union, List
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
-from utils import fetch
+from src.utils import fetch, generate_hash
+from src.database.database import Database
+from src.database.models import ActivePlanningApplications
 
 
 # Set up logger
@@ -78,7 +80,7 @@ def get_contact_info(soup: BeautifulSoup) -> Dict[str, Union[str, List[str], Non
     # Join the address parts into a single string
     contact_info["mailing_address"] = " ".join(contact_info["mailing_address"])
 
-    return contact_info
+    return json.dumps(contact_info)
 
 
 def get_section_data(soup: BeautifulSoup, class_name: str) -> Dict[str, str]:
@@ -111,13 +113,17 @@ def get_case(url: str) -> Optional[Dict[str, Optional[str]]]:
         "process": None,
         "status": None,
         "contact_info": None,
+        "documents_submitted_for_evaluation": None,
     }
 
     try:
         res = fetch(url)
         soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
         case_data["title"] = get_text_from_element(soup, "h1", "title")
-        case_data["last_updated"] = get_datetime_from_element(soup, "time")
+        case_data["id"] = generate_hash(case_data["title"])
+        case_data["last_updated"] = get_datetime_from_element(
+            soup, "time", class_name="datetime"
+        )
         case_data["update_notice"] = get_text_from_element(
             soup, "div", "c-planning-notification"
         )
@@ -132,7 +138,7 @@ def get_case(url: str) -> Optional[Dict[str, Optional[str]]]:
         return None
 
 
-def halifax_business_planning_development_applications(url: str) -> Optional[Dict]:
+def scrape(url: str) -> Optional[Dict]:
     scraped_data = []
 
     try:
@@ -142,7 +148,7 @@ def halifax_business_planning_development_applications(url: str) -> Optional[Dic
         # Each row represents a current application
         rows = soup.find_all("div", class_="views-row")
 
-        for row in rows:
+        for row in rows[:10]:
             a_tag = row.find("a")
 
             # Skip broken links
@@ -159,9 +165,13 @@ def halifax_business_planning_development_applications(url: str) -> Optional[Dic
             ).get_text()
 
             case_data = get_case(row_url)
+            case_data["summary"] = summary
+
             scraped_data.append(case_data)
 
-            sleep_duration = round(random.uniform(2, 4), 3)
+            logging.info(f"Scraped application: {case_data['title']}")
+
+            sleep_duration = round(random.uniform(0, 2), 1)
             logging.info(f"Sleeping for {sleep_duration} seconds")
             time.sleep(sleep_duration)
 
@@ -172,8 +182,14 @@ def halifax_business_planning_development_applications(url: str) -> Optional[Dic
         return None
 
 
-if __name__ == "__main__":
+def main():
     url = "https://www.halifax.ca/business/planning-development/applications"
 
-    data = halifax_business_planning_development_applications(url)
-    # print(data)
+    data = scrape(url)
+
+    db = Database("sqlite:///southwest.db")
+    db.compare_and_insert(ActivePlanningApplications, data)
+
+
+if __name__ == "__main__":
+    main()
