@@ -22,9 +22,19 @@ class Database:
         self.session = sessionmaker(bind=self.engine)
 
     def create_tables(self):
-        # This will create the tables if they don't exist, based on the models defined in Base's subclasses
-        Base.metadata.create_all(self.engine)
-        logging.info(f"Succesfully created tables.")
+        inspector = inspect(self.engine)
+        existing_tables_before = inspector.get_table_names()
+
+        try:
+            Base.metadata.create_all(self.engine)
+            existing_tables_after = inspector.get_table_names()
+            created_tables = set(existing_tables_after) - set(existing_tables_before)
+            if created_tables:
+                logging.info(f"Successfully created tables: {created_tables}")
+            else:
+                logging.info("No new tables created; all tables already exist.")
+        except SQLAlchemyError as e:
+            logging.error(f"Error creating tables: {e}")
 
     def show_tables(self):
         inspector = inspect(self.engine)
