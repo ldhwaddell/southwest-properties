@@ -16,6 +16,21 @@ logger = logging.basicConfig(
 )
 
 
+"""
+DB Schema
+Title
+Summary
+last updated
+Update notice (gray box thing)
+Request
+Proposal
+Process
+Status
+Docs submitted for eval
+contact info
+
+"""
+
 def get_case(url: str):
     try:
         res = fetch(url)
@@ -40,11 +55,8 @@ def halifax_business_planning_development_applications(url: str) -> Optional[Dic
         res = fetch(url)
         soup = BeautifulSoup(res.content, "html.parser")
 
-        # Container div holding the relevant info
-        content_div = soup.find("div", class_="view-content")
-
-        # Rows represent each current application
-        rows = content_div.find_all("div", class_="views-row")
+        # Each row represents a current application
+        rows = soup.find_all("div", class_="views-row")
 
         for row in rows:
             a_tag = row.find("a")
