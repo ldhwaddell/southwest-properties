@@ -38,11 +38,8 @@ class Database:
 
     def show_tables(self):
         inspector = inspect(self.engine)
-
-        # inspector = Inspector.from_engine(self.engine)
         tables = inspector.get_table_names()
-
-        print(f"Tables in the database: {tables}")
+        logging.info(f"Tables in the database: {tables}")
 
     def compare_and_insert(self, table_class, data_list: List[Dict]):
         session = self.session()
@@ -51,8 +48,9 @@ class Database:
 
         try:
             for data in data_list:
+                diff_fields = []
                 try:
-                    # Try to retrieve the existing record by hash_id
+                    # Try to retrieve the existing record by id
                     existing_record = (
                         session.query(table_class).filter_by(id=data["id"]).one()
                     )
@@ -66,6 +64,9 @@ class Database:
                     # If the record doesn't exist, prepare it for bulk insert
                     new_records.append(table_class(**data))
 
+            if diff_fields:
+                logging.info(f"Different fields found: {diff_fields}")
+
             # Bulk insert new records
             if new_records:
                 session.bulk_save_objects(new_records)
@@ -76,6 +77,11 @@ class Database:
             if updated_records:
                 logging.info(
                     f"Updated {updated_records} existing records in {table_class.__tablename__}."
+                )
+
+            if not new_records and not updated_records:
+                logging.info(
+                    f"No new or updated records in {table_class.__tablename__}."
                 )
 
         except SQLAlchemyError as e:
