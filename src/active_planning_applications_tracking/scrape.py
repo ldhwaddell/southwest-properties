@@ -36,6 +36,9 @@ def get_datetime_from_element(
 def get_contact_info(soup: BeautifulSoup) -> Dict[str, Union[str, List[str], None]]:
     contact_info_div = soup.find("div", class_="paragraph--type--contact-info")
 
+    if not contact_info_div:
+        return None
+
     contact_info = {
         "name": None,
         "telephone": None,
@@ -148,7 +151,7 @@ def scrape(url: str) -> Optional[Dict]:
         # Each row represents a current application
         rows = soup.find_all("div", class_="views-row")
 
-        for row in rows[:10]:
+        for row in rows:
             a_tag = row.find("a")
 
             # Skip broken links
