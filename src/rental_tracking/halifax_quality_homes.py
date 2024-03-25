@@ -81,6 +81,7 @@ def get_listing(url: str):
         res = fetch(url)
         soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
         listing_data["title"] = get_text_from_element(soup, "h2")
+        listing_data["id"] = generate_hash(listing_data["title"])
         listing_data["price"] = get_text_from_element(soup, "h3")
         listing_data["category"] = get_text_from_element(
             soup, "div", class_name="element element-itemcategory first"
@@ -118,7 +119,7 @@ def scrape(url: str) -> Optional[Dict]:
                 logging.warning("Unable to find href for row")
                 continue
 
-            # Build the url for the case represented by the row
+            # Build the url for the case represented by the tag
             href = a_tag.get("href")
             listing_url = urljoin(url, href)
 
@@ -127,10 +128,20 @@ def scrape(url: str) -> Optional[Dict]:
             # print(listing_data)
             scraped_data.append(listing_data)
 
-            # logging.info(f"Scraped application: {case_data['title']}")
+            logging.info(f"Scraped application: {listing_data['title']}")
             sleep_duration = round(random.uniform(0, 2), 1)
             logging.info(f"Sleeping for {sleep_duration} seconds")
             time.sleep(sleep_duration)
+
+        logging.info("Checking for more pages")
+        next_page_tag = soup.find("a", class_="next")
+        if next_page_tag:
+            href = next_page_tag.get("href")
+            next_page_url = urljoin(url, href)
+
+            scraped_data.extend(scrape(next_page_url))
+        else:
+            logging.info("No more pages found")
 
         return scraped_data
 
