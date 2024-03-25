@@ -45,7 +45,7 @@ def retry(retries: int, retry_sleep_sec: int) -> Callable[..., Any]:
 
 
 @retry(retries=3, retry_sleep_sec=5)
-def fetch(url: str) -> Response:
+def fetch(url: str, stream=True, allow_redirects=False) -> Response:
     """
     Fetches a URL, streams the response. Raises exception if the status code is invalid.
 
@@ -54,7 +54,9 @@ def fetch(url: str) -> Response:
     """
     user_agent = UserAgent()
     headers = {"User-Agent": user_agent.random}
-    res = requests.get(url, stream=True, headers=headers)
+    res = requests.get(
+        url, stream=stream, allow_redirects=allow_redirects, headers=headers
+    )
     res.raise_for_status()
     return res
 
