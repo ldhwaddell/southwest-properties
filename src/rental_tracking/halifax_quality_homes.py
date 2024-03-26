@@ -1,6 +1,4 @@
 import logging
-import random
-import time
 from typing import Optional, Dict, List
 from urllib.parse import urljoin
 
@@ -82,15 +80,12 @@ def get_listings(scraper: Scraper, listing_urls: List[str]):
             listing_data["address"] = scraper.get_location_from_maps_url(
                 location_tag.get("href")
             )
-            # listing_data["features"] = get_features_data(soup)
             listing_data["features"] = soup.find("div", class_="floatboxbottom")
 
             listings.append(listing_data)
 
             logging.info(f"Scraped application: {listing_data['title']}")
-            sleep_duration = round(random.uniform(0, 2), 1)
-            logging.info(f"Sleeping for {sleep_duration} seconds")
-            time.sleep(sleep_duration)
+            scraper.sleep()
 
         except Exception as err:
             logging.error(f"Skipping. Error processing case data from {url}: {err}")

@@ -1,4 +1,5 @@
 import logging
+import random
 import time
 
 from itertools import cycle
@@ -78,11 +79,15 @@ class Scraper:
         return
 
     def get_text_from_element(
-        self, soup: BeautifulSoup | Tag, tag: str, class_name: Optional[str] = None
+        self,
+        soup: BeautifulSoup | Tag,
+        tag: str,
+        class_name: Optional[str] = None,
+        strip: bool = True,
     ) -> Optional[str]:
         """Utility method to extract text from a specific tag"""
         element = soup.find(tag, class_=class_name)
-        return element.get_text(strip=True) if element else None
+        return element.get_text(strip=strip) if element else None
 
     def get_attribute_from_element(
         self,
@@ -115,6 +120,11 @@ class Scraper:
             return address
 
         return None
+
+    def sleep(self):
+        sleep_duration = round(random.uniform(0, 2), 1)
+        logging.info(f"Sleeping for {sleep_duration} seconds")
+        time.sleep(sleep_duration)
 
     def add_function(self, function):
         """Add a function to the list of functions to execute."""
