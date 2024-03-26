@@ -1,13 +1,13 @@
-import json
 import logging
 import random
 import time
-from typing import Optional, Dict, Union, List
-from urllib.parse import urljoin, urlparse, unquote
+from typing import Optional, Dict, List
+from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
-from src.utils import fetch, generate_hash
+from src.utils import generate_hash
+from src.scraper.scraper import Scraper
 
 # from src.database.database import Database
 # from src.database.models import ActivePlanningApplications
@@ -20,92 +20,91 @@ logger = logging.basicConfig(
 )
 
 
-def get_text_from_element(
-    soup: BeautifulSoup, tag: str, class_name: Optional[str] = None
-) -> Optional[str]:
-    element = soup.find(tag, class_=class_name)
-    return element.get_text(strip=True) if element else None
+def get_features_data(_: Scraper, listings: List[Dict]) -> Dict[str, str]:
+    """Extracts the features from each listing 'floatboxbottom' div"""
+    for listing in listings:
+        features = {}
+
+        # Use 'get' to avoid key error
+        if not listing.get("features"):
+            continue
+
+        for element in listing["features"].find_all("div", class_="element"):
+            key = (
+                element.find("h3")
+                .get_text(strip=True)
+                .lower()
+                .strip()
+                .replace(" ", "_")
+            )
+            # The value is the next sibling of the h3 element which is navigable string
+            value = (
+                element.find("h3").next_sibling.strip()
+                if element.find("h3").next_sibling
+                else None
+            )
+            features[key] = value
+
+        listing["features"] = features
+
+    return listings
 
 
-def get_location_from_maps_url(url: str) -> str:
-    if "goo.gl" in url or "maps.app.goo.gl" in url:
-        # Follow the shortened URL to get the actual Google Maps URL
-        res = fetch(url, allow_redirects=True)
-        # Use the final URL after all redirects
-        url = res.url
+def get_listings(scraper: Scraper, listing_urls: List[str]):
+    """Gets each listing from a list of URLs"""
+    listings = []
 
-    parsed_url = urlparse(url)
+    for url in listing_urls:
 
-    # Check if 'place' is in the path segments
-    if "place" in parsed_url.path.split("/"):
-        # Find the 'maps/place/' segment in the path
-        path_segments = parsed_url.path.split("/")
-        address_segment_index = path_segments.index("place") + 1
-        # Extract the address
-        address = unquote(path_segments[address_segment_index]).replace("+", " ")
-        return address
+        listing_data = {
+            "title": None,
+            "price": None,
+            "category": None,
+            "description": None,
+            "address": None,
+            "features": None,
+        }
+        try:
+            res = scraper.fetch(url)
+            soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
 
-    return None
+            listing_data["title"] = scraper.get_text_from_element(soup, "h2")
+            listing_data["id"] = generate_hash(listing_data["title"])
+            listing_data["price"] = scraper.get_text_from_element(soup, "h3")
+            listing_data["category"] = scraper.get_text_from_element(
+                soup, "div", class_name="element element-itemcategory first"
+            )
+            listing_data["description"] = scraper.get_text_from_element(
+                soup, "ul", class_name="pos-taxonomy"
+            )
+
+            location_tag = soup.find("a", {"title": "Location Map"})
+            listing_data["address"] = scraper.get_location_from_maps_url(
+                location_tag.get("href")
+            )
+            # listing_data["features"] = get_features_data(soup)
+            listing_data["features"] = soup.find("div", class_="floatboxbottom")
+
+            listings.append(listing_data)
+
+            logging.info(f"Scraped application: {listing_data['title']}")
+            sleep_duration = round(random.uniform(0, 2), 1)
+            logging.info(f"Sleeping for {sleep_duration} seconds")
+            time.sleep(sleep_duration)
+
+        except Exception as err:
+            logging.error(f"Skipping. Error processing case data from {url}: {err}")
+            listings.append(None)
+
+    return listings
 
 
-def get_features_data(soup: BeautifulSoup) -> Dict[str, str]:
-    features = {}
-
-    # Finds the first one
-    features_div = soup.find("div", class_="floatboxbottom")
-
-    for element in features_div.find_all("div", class_="element"):
-        key = element.find("h3").get_text(strip=True).lower().strip().replace(" ", "_")
-        # The value is the next sibling of the h3 element which is navigable string
-        value = (
-            element.find("h3").next_sibling.strip()
-            if element.find("h3").next_sibling
-            else None
-        )
-        features[key] = value
-
-    return features
-
-
-def get_listing(url: str):
-    listing_data = {
-        "title": None,
-        "price": None,
-        "category": None,
-        "description": None,
-        "address": None,
-        "features": None,
-    }
+def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
+    """Scrapes the listing urls from each row on the rentals page"""
+    scraped_urls = []
 
     try:
-        res = fetch(url)
-        soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
-        listing_data["title"] = get_text_from_element(soup, "h2")
-        listing_data["id"] = generate_hash(listing_data["title"])
-        listing_data["price"] = get_text_from_element(soup, "h3")
-        listing_data["category"] = get_text_from_element(
-            soup, "div", class_name="element element-itemcategory first"
-        )
-        listing_data["description"] = get_text_from_element(
-            soup, "ul", class_name="pos-taxonomy"
-        )
-
-        location_tag = soup.find("a", {"title": "Location Map"})
-        listing_data["address"] = get_location_from_maps_url(location_tag.get("href"))
-        listing_data["features"] = get_features_data(soup)
-
-        return listing_data
-
-    except Exception as err:
-        logging.error(f"Error processing case data from {url}: {err}")
-        return None
-
-
-def scrape(url: str) -> Optional[Dict]:
-    scraped_data = []
-
-    try:
-        res = fetch(url)
+        res = scraper.fetch(url)
         soup = BeautifulSoup(res.content, "html.parser")
 
         # Each row represents a current application
@@ -123,15 +122,7 @@ def scrape(url: str) -> Optional[Dict]:
             href = a_tag.get("href")
             listing_url = urljoin(url, href)
 
-            listing_data = get_listing(listing_url)
-            listing_data["url"] = listing_url
-            # print(listing_data)
-            scraped_data.append(listing_data)
-
-            logging.info(f"Scraped application: {listing_data['title']}")
-            sleep_duration = round(random.uniform(0, 2), 1)
-            logging.info(f"Sleeping for {sleep_duration} seconds")
-            time.sleep(sleep_duration)
+            scraped_urls.append(listing_url)
 
         logging.info("Checking for more pages")
         next_page_tag = soup.find("a", class_="next")
@@ -139,11 +130,11 @@ def scrape(url: str) -> Optional[Dict]:
             href = next_page_tag.get("href")
             next_page_url = urljoin(url, href)
 
-            scraped_data.extend(scrape(next_page_url))
+            scraped_urls.extend(fetch_rows(scraper, next_page_url))
         else:
             logging.info("No more pages found")
 
-        return scraped_data
+        return scraped_urls[:5]
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
@@ -152,12 +143,13 @@ def scrape(url: str) -> Optional[Dict]:
 
 def main():
     url = "https://www.halifaxqualityhomes.com/index.php?option=com_zoo&view=category&layout=category&Itemid=236"
+    scraper = Scraper()
+    scraper.add_function(fetch_rows)
+    scraper.add_function(get_listings)
+    scraper.add_function(get_features_data)
 
-    data = scrape(url)
+    data = scraper.execute(url)
     print(data)
-
-    # db = Database("sqlite:///southwest.db")
-    # db.compare_and_insert(ActivePlanningApplications, data)
 
 
 if __name__ == "__main__":
