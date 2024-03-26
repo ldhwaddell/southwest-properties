@@ -8,6 +8,7 @@ from urllib.parse import urlparse, unquote
 
 import requests
 from bs4 import BeautifulSoup, Tag
+from fake_useragent import UserAgent
 
 
 # Set up logger
@@ -29,11 +30,12 @@ class Scraper:
     def fetch_proxies(self) -> list:
         """Fetch list of proxies from ProxyScrape and return as list of dicts."""
         try:
-            res = requests.get(PROXIES_API)
+            res = self.fetch(PROXIES_API)
             proxy_string = res.content.decode("utf-8")
             proxy_list = proxy_string.strip().split("\r\n")
             proxies = [{"http": proxy, "https": proxy} for proxy in proxy_list]
             return proxies
+        # TODO: Fix to react properly with fetch method
         except requests.RequestException as e:
             logging.error(f"Failed to fetch proxies: {e}")
             return []
@@ -43,19 +45,28 @@ class Scraper:
         url: str,
         use_proxy: bool = False,
         allow_redirects: bool = False,
+        stream: bool = False,
         retries: int = 3,
         retry_sleep_sec: int = 5,
+        timeout: int = 5,
     ) -> Optional[requests.Response]:
-        """Fetch URL using optional proxy rotation."""
+        """Fetches URL with desired options"""
         if use_proxy and not self.proxies:
             logging.error(f"'use_proxy' set to {use_proxy} but no proxies available.")
             return
 
         for attempt in range(retries):
             proxy = next(self.proxy_pool, None) if use_proxy else None
+            user_agent = UserAgent()
+            headers = {"User-Agent": user_agent.random}
             try:
                 response = requests.get(
-                    url, proxies=proxy, timeout=5, allow_redirects=allow_redirects
+                    url,
+                    proxies=proxy,
+                    timeout=timeout,
+                    allow_redirects=allow_redirects,
+                    stream=stream,
+                    headers=headers,
                 )
                 response.raise_for_status()
                 return response
@@ -67,11 +78,22 @@ class Scraper:
         return
 
     def get_text_from_element(
-        self, soup: BeautifulSoup, tag: str, class_name: Optional[str] = None
+        self, soup: BeautifulSoup | Tag, tag: str, class_name: Optional[str] = None
     ) -> Optional[str]:
         """Utility method to extract text from a specific tag"""
         element = soup.find(tag, class_=class_name)
         return element.get_text(strip=True) if element else None
+
+    def get_attribute_from_element(
+        self,
+        soup: BeautifulSoup | Tag,
+        tag: str,
+        attribute: str,
+        class_name: Optional[str] = None,
+    ) -> Optional[str]:
+        """Utility method to extract attribute from a specific tag"""
+        element = soup.find(tag, class_=class_name)
+        return element.get(attribute) if element else None
 
     def get_location_from_maps_url(self, url: str) -> str:
         """Utility method to extract the location from a google maps URL"""
