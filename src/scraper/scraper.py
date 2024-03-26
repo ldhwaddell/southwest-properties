@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import time
 
 from itertools import cycle
@@ -121,8 +122,13 @@ class Scraper:
 
         return None
 
-    def sleep(self):
-        sleep_duration = round(random.uniform(0, 2), 1)
+    def clean_whitespace(self, text: str) -> str:
+        """Replace one or more whitespace characters (including non-breaking spaces) with a single space"""
+        return re.sub(r"\s+", " ", text)
+
+    def sleep(self, min: int = 0, max: int = 2):
+        """Sleeps a random amount of time"""
+        sleep_duration = round(random.uniform(min, max), 2)
         logging.info(f"Sleeping for {sleep_duration} seconds")
         time.sleep(sleep_duration)
 
