@@ -136,9 +136,7 @@ def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     scraper = Scraper()
     scraper.add_function(get_tables)
     scraper.add_function(get_rows)
-    # scraper.add_function(get_cases)
-    # scraper.add_function(get_sections)
-    # scraper.add_function(get_contact_info)
+    # scraper.add_function()
     data = scraper.execute(url)
 
     return data
