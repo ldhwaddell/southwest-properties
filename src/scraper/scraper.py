@@ -5,7 +5,7 @@ import time
 
 from datetime import datetime
 from itertools import cycle
-from typing import Optional
+from typing import Optional, Dict
 from urllib.parse import urlparse, unquote
 
 
@@ -85,11 +85,12 @@ class Scraper:
         self,
         soup: BeautifulSoup | Tag,
         tag: str,
+        attributes: Dict[str, str] = None,
         class_name: Optional[str] = None,
         strip: bool = True,
     ) -> Optional[str]:
         """Utility method to extract text from a specific tag"""
-        element = soup.find(tag, class_=class_name)
+        element = soup.find(tag, attrs=attributes, class_=class_name)
         return element.get_text(strip=strip) if element else None
 
     def get_attribute_from_element(
