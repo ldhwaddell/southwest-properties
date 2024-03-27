@@ -170,7 +170,7 @@ def get_cases(
     return applications
 
 
-def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
+def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
     """Scrapes the applications urls and summary from each row on the planning applications page"""
     applications = []
 
@@ -200,7 +200,7 @@ def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 
             applications.append(row_data)
 
-        return applications[:1]
+        return applications
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
@@ -210,7 +210,7 @@ def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     """Build and executed the scraper"""
     scraper = Scraper()
-    scraper.add_function(fetch_rows)
+    scraper.add_function(get_rows)
     scraper.add_function(get_cases)
     scraper.add_function(get_sections)
     scraper.add_function(get_contact_info)
