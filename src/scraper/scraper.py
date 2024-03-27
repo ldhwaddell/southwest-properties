@@ -3,6 +3,7 @@ import random
 import re
 import time
 
+from datetime import datetime
 from itertools import cycle
 from typing import Optional
 from urllib.parse import urlparse, unquote
@@ -125,6 +126,11 @@ class Scraper:
     def clean_whitespace(self, text: str) -> str:
         """Replace one or more whitespace characters (including non-breaking spaces) with a single space"""
         return re.sub(r"\s+", " ", text)
+
+    def parse_iso8601_date(self, date_str: str) -> datetime:
+        """Parse an ISO 8601 formatted date string to a datetime object."""
+        # Removes z at end
+        return datetime.fromisoformat(date_str[:-1])
 
     def sleep(self, min: int = 0, max: int = 2):
         """Sleeps a random amount of time"""
