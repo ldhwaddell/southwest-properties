@@ -38,8 +38,8 @@ class Scraper:
             proxy_list = proxy_string.strip().split("\r\n")
             proxies = [{"http": proxy, "https": proxy} for proxy in proxy_list]
             return proxies
-        # TODO: Fix to react properly with fetch method
-        except requests.RequestException as e:
+
+        except Exception as e:
             logging.error(f"Failed to fetch proxies: {e}")
             return []
 
@@ -73,12 +73,13 @@ class Scraper:
                 )
                 response.raise_for_status()
                 return response
+
             except requests.RequestException as e:
                 logging.error(f"Request failed for URL: {url}. Error: {e}")
                 logging.error(f"Trying attempt {attempt+1} of {retries}")
                 time.sleep(retry_sleep_sec)
 
-        return
+        raise Exception(f"Exceeded max retry num: {retries} failed")
 
     def get_text_from_element(
         self,
