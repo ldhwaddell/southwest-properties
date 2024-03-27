@@ -114,12 +114,12 @@ def get_sections(
 
 
 def get_cases(
-    scraper: Scraper, scraped_urls_and_summary: List[Dict[str, Optional[str]]]
+    scraper: Scraper, applications: List[Dict[str, Optional[str]]]
 ) -> List[Dict[str, Optional[str]]]:
     """Get each case from a list of case urls and corresponding summaries"""
-    applications = []
+    # applications = []
 
-    for application in scraped_urls_and_summary:
+    for application in applications:
         application_data = {
             "title": None,
             "id": None,
@@ -138,9 +138,11 @@ def get_cases(
             )
             application_data["id"] = generate_hash(application_data["title"])
 
-            application_data["last_updated"] = scraper.get_attribute_from_element(
+            # Get and parse the last time it was updated
+            last_updated = scraper.get_attribute_from_element(
                 soup, "time", attribute="datetime", class_name="datetime"
             )
+            application_data["last_updated"] = scraper.parse_iso8601_date(last_updated)
 
             application_data["update_notice"] = scraper.get_text_from_element(
                 soup, "div", "c-planning-notification"
@@ -154,7 +156,7 @@ def get_cases(
                 "div", class_="paragraph--type--contact-info"
             )
 
-            applications.append(application_data)
+            application.update(application_data)
 
             logging.info(f"Scraped application: {application_data['title']}")
             scraper.sleep()
@@ -163,14 +165,14 @@ def get_cases(
             logging.error(
                 f"Error processing case data from {application['url']}: {err}"
             )
-            applications.append(None)
+            # applications.append(None)
 
     return applications
 
 
 def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
     """Scrapes the applications urls and summary from each row on the planning applications page"""
-    scraped_urls_and_summary = []
+    applications = []
 
     try:
         res = scraper.fetch(url)
@@ -196,9 +198,9 @@ def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
                 row, "div", class_name="views-field views-field-field-summary"
             )
 
-            scraped_urls_and_summary.append(row_data)
+            applications.append(row_data)
 
-        return scraped_urls_and_summary[:5]
+        return applications[:1]
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
@@ -215,6 +217,7 @@ def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     data = scraper.execute(url)
 
     return data
+
 
 # if __name__ == "__main__":
 #     main()
