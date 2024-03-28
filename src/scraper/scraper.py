@@ -72,6 +72,7 @@ class Scraper:
                     headers=headers,
                 )
                 response.raise_for_status()
+                logging.info(f"Successfully fetched URL: {url}")
                 return response
 
             except requests.RequestException as e:
