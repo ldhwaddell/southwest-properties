@@ -94,7 +94,7 @@ def get_listings(scraper: Scraper, listing_urls: List[str]):
     return listings
 
 
-def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
+def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
     """Scrapes the listing urls from each row on the rentals page"""
     scraped_urls = []
 
@@ -125,7 +125,7 @@ def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
             href = next_page_tag.get("href")
             next_page_url = urljoin(url, href)
 
-            scraped_urls.extend(fetch_rows(scraper, next_page_url))
+            scraped_urls.extend(get_rows(scraper, next_page_url))
         else:
             logging.info("No more pages found")
 
@@ -139,7 +139,7 @@ def fetch_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 def main():
     url = "https://www.halifaxqualityhomes.com/index.php?option=com_zoo&view=category&layout=category&Itemid=236"
     scraper = Scraper()
-    scraper.add_function(fetch_rows)
+    scraper.add_function(get_rows)
     scraper.add_function(get_listings)
     scraper.add_function(get_features_data)
 
