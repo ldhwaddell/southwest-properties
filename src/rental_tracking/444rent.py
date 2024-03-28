@@ -1,12 +1,9 @@
-import json
 import logging
-import re
-from typing import Optional, Dict, Union, List
+from typing import Optional, Dict, List
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
-from src.utils import generate_hash
 from src.scraper.scraper import Scraper
 
 
@@ -29,80 +26,160 @@ def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
         "policy": None,
     }
 
-    # Find the main table, then immediate tr children
-    table = tab.find("table")
-    rows: List[Tag] = table.find_all("tr", recursive=False)
+    try:
+        # Find the main table, then immediate tr children
+        table = tab.find("table")
+        rows: List[Tag] = table.find_all("tr", recursive=False)
 
-    for row in rows:
-        # Category is always the first td
-        category = (
-            row.find("td")
-            .get_text(strip=True)
-            .lower()
-            .replace(" ", "_")
-            .replace(":", "")
-        )
-        values_tables = row.find_all("table")
-        values = []
+        for row in rows:
+            # Category is always the first td
+            category = (
+                row.find("td")
+                .get_text(strip=True)
+                .lower()
+                .replace(" ", "_")
+                .replace(":", "")
+            )
+            values_tables = row.find_all("table")
+            values = []
 
-        for table in values_tables:
-            all_tds = table.find_all("td")
+            for table in values_tables:
+                all_tds = table.find_all("td")
 
-            # They used entire tables to display a bullet point, filter them out
-            non_width_12_tds = [td for td in all_tds if td.get("width") == None]
-            for td in non_width_12_tds:
-                text = td.get_text(strip=True)
-                values.append(text)
+                # They used entire tables to display a bullet point, filter them out
+                non_width_12_tds = [td for td in all_tds if td.get("width") == None]
+                for td in non_width_12_tds:
+                    text = td.get_text(strip=True)
+                    values.append(text)
 
-            # Assign the list of values to the category in the dictionary
-            leasing_info[category] = values
-    return leasing_info
+                # Assign the list of values to the category in the dictionary
+                leasing_info[category] = values
+
+    except Exception as e:
+        logging.error(f"Error: {e}")
+    finally:
+        return leasing_info
 
 
-def get_building_info(tab: Tag):
+def get_building_info(tab: Tag) -> List[str | Dict[str, str]]:
+    """Extracts all building info from the building tab"""
+
     building_info = []
 
-    table = tab.find("table")
-    main_row = table.find("tr")
-    columns = main_row.find_all("td", recursive=False)
+    try:
+        table = tab.find("table")
+        main_row = table.find("tr")
+        columns = main_row.find_all("td", recursive=False)
 
-    paired_tables = []
-    for column in columns:
-        tables = column.find_all("table")
+        paired_tables = []
+        for column in columns:
+            tables = column.find_all("table")
 
-        for i in range(len(tables)):
-            current_table = tables[i]
+            for i in range(len(tables)):
+                current_table = tables[i]
 
-            # Check if the current table does not have the 'style' attribute
-            if not current_table.get("style"):
-                # Then check the next one
-                if i + 1 < len(tables):
-                    next_table = tables[i + 1]
-                    if next_table.get("style"):
-                        # If the next one is a match, skip rest of iteration
-                        paired_tables.append((current_table, next_table))
+                # Check if the current table does not have the 'style' attribute
+                if not current_table.get("style"):
+                    # Then check the next one
+                    if i + 1 < len(tables):
+                        next_table = tables[i + 1]
+                        if next_table.get("style"):
+                            # If the next one is a match, skip rest of iteration
+                            paired_tables.append((current_table, next_table))
+                            continue
+
+                    # This is only reached when the previous table has no style, but the next one doesnt either
+                    paired_tables.append((current_table,))
+
+        # Now paired_tables contains tuples of (non-styled table, styled table) or (styled table,)
+        for pair in paired_tables:
+
+            if len(pair) == 1:
+                building_info.append(pair[0].get_text(strip=True))
+            else:
+                key = (
+                    pair[0]
+                    .get_text(strip=True)
+                    .lower()
+                    .replace(" ", "_")
+                    .replace(":", "")
+                )
+                value = pair[1].get_text(strip=True)
+
+                building_info.append({key: value})
+
+    except Exception as e:
+        logging.error(f"Error: {e}")
+    finally:
+        return building_info
+
+
+def get_suite_info(tab: Tag) -> Dict[str, List[str]]:
+    """Extracts all suite info from the suite tab"""
+
+    suite_info = {
+        "miscellaneous": [],
+        "appliances": [],
+        "kitchen": [],
+        "bathroom": [],
+        "flooring": [],
+        "storage": [],
+    }
+
+    try:
+        # Process miscellaneous section
+        miscellaneous = tab.find("table", {"cellpadding": "6"})
+        if miscellaneous:
+            # Each row is a table
+            tables = miscellaneous.find_all("table")
+            for table in tables:
+                tds = table.find_all("td")
+
+                for td in tds:
+                    # Those that are styled are bullet points
+                    if td.get("style"):
                         continue
 
-                # This is only reached when the previous table has no style, but the next one doesnt either
-                paired_tables.append((current_table,))
+                    suite_info["miscellaneous"].append(td.get_text(strip=True))
 
-    # Now paired_tables contains tuples of (non-styled table, styled table) or (styled table,)
-    for pair in paired_tables:
+        # Get all tables, skipping the first if it's the miscellaneous section
+        tables_to_process = tab.find_all("table", recursive=False)
+        if miscellaneous:
+            tables_to_process = tables_to_process[1:]
 
-        if len(pair) == 1:
-            building_info.append(pair[0].get_text(strip=True))
-        else:
-            key = (
-                pair[0].get_text(strip=True).lower().replace(" ", "_").replace(":", "")
+        # Identify paired tables and collect their information
+        for i in range(0, len(tables_to_process), 2):
+            # Assume tables come in pairs: title, details
+            title_table = tables_to_process[i]
+
+            # Check if the next table would be valid
+            detail_table = (
+                tables_to_process[i + 1] if i + 1 < len(tables_to_process) else None
             )
-            value = pair[1].get_text(strip=True)
 
-            building_info.append({key: value})
+            # The use bgcolor on the details, not the title
+            if (
+                title_table
+                and detail_table
+                and not title_table.get("bgcolor")
+                and detail_table.get("bgcolor")
+            ):
+                key = title_table.get_text(strip=True).lower()
+                suite_info[key] = [
+                    td.get_text(strip=True) for td in detail_table.find_all("td")
+                ]
+            elif title_table and not title_table.get("bgcolor"):
+                # If there's a title table without a detail table following, add contents to miscellaneous
+                suite_info["miscellaneous"].append(title_table.get_text(strip=True))
 
-    return building_info
+    except Exception as e:
+        logging.error(f"Error: {e}")
+    finally:
+        return suite_info
 
 
 def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
+    """Get the content from the leasing, description, building, and suite tabs on the page"""
     tabs_data = {"leasing": None, "description": None, "building": None, "suite": None}
 
     for listing in listings:
@@ -115,7 +192,7 @@ def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
             tabs_data["leasing"] = get_leasing_info(tabs[0])
             tabs_data["description"] = tabs[1].get_text(strip=True)
             tabs_data["building"] = get_building_info(tabs[2])
-            # tabs_data["suite"] = get_suite_info(tabs[3])
+            tabs_data["suite"] = get_suite_info(tabs[3])
             listing.update(tabs_data)
 
         except Exception as err:
@@ -127,6 +204,7 @@ def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
 def get_listings(
     scraper: Scraper, rows: List[Dict[str, Optional[str]]]
 ) -> List[Dict[str, Optional[str]]]:
+    """Scrape listing content from the rows of the main table"""
     for row in rows:
         row_data = {"rooms": None, "tabs": None}
 
