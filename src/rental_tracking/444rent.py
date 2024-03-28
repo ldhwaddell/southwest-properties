@@ -17,46 +17,140 @@ logger = logging.basicConfig(
 )
 
 
-def get_tab_content(tab: Tag):
-    info_list = []
+def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
+    """Extracts all leasing info from the leasing tab"""
+    leasing_info = {
+        "lease": None,
+        "included": None,
+        "not_included": None,
+        "parking": None,
+        "storage": None,
+        "deposit": None,
+        "policy": None,
+    }
 
-    print(len(tab.find_all("tr")))
+    # Find the main table, then immediate tr children
+    table = tab.find("table")
+    rows: List[Tag] = table.find_all("tr", recursive=False)
 
-    # for tr in tab.find_all("tr"):
-    #     print(tr)
-    #     print("\n\n\n")
-    #     row_info = {}
+    for row in rows:
+        # Category is always the first td
+        category = (
+            row.find("td")
+            .get_text(strip=True)
+            .lower()
+            .replace(" ", "_")
+            .replace(":", "")
+        )
+        values_tables = row.find_all("table")
+        values = []
 
-    # tds = tr.find_all("td")
-    # if tds:
-    #     key = tds[0].find("b", class_="normal").get_text(strip=True).rstrip(":")
-    #     print(key)
+        for table in values_tables:
+            all_tds = table.find_all("td")
 
-    #     value = " ".join(
-    #         [item.get_text(strip=True) for item in tds[1].find_all(recursive=False)]
-    #     )
+            # They used entire tables to display a bullet point, filter them out
+            non_width_12_tds = [td for td in all_tds if td.get("width") == None]
+            for td in non_width_12_tds:
+                text = td.get_text(strip=True)
+                values.append(text)
 
-    #     # Add the key-value pair to the row info
-    #     row_info[key] = value
-
-    # if row_info:  # If the row_info dict is not empty, add it to the info_list
-    #     info_list.append(row_info)
+            # Assign the list of values to the category in the dictionary
+            leasing_info[category] = values
+    return leasing_info
 
 
-# def get_listing(url: str):
-#     try:
-#         res = fetch(url)
-#         soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
-#         tab_container = soup.find("div", class_="tab_container")
+def get_building_info(tab: Tag):
+    building_info = []
 
-#         tabs = tab_container.find_all("div", class_="tab_content")
+    table = tab.find("table")
+    main_row = table.find("tr")
+    columns = main_row.find_all("td", recursive=False)
 
-#         for tab in tabs[:5]:
-#             tab_info = get_tab_content(tab)
+    paired_tables = []
+    for column in columns:
+        tables = column.find_all("table")
 
-#     except Exception as err:
-#         logging.error(f"Error processing case data from {url}: {err}")
-#         return None
+        for i in range(len(tables)):
+            current_table = tables[i]
+
+            # Check if the current table does not have the 'style' attribute
+            if not current_table.get("style"):
+                # Then check the next one
+                if i + 1 < len(tables):
+                    next_table = tables[i + 1]
+                    if next_table.get("style"):
+                        # If the next one is a match, skip rest of iteration
+                        paired_tables.append((current_table, next_table))
+                        continue
+
+                # This is only reached when the previous table has no style, but the next one doesnt either
+                paired_tables.append((current_table,))
+
+    # Now paired_tables contains tuples of (non-styled table, styled table) or (styled table,)
+    for pair in paired_tables:
+
+        if len(pair) == 1:
+            building_info.append(pair[0].get_text(strip=True))
+        else:
+            key = (
+                pair[0].get_text(strip=True).lower().replace(" ", "_").replace(":", "")
+            )
+            value = pair[1].get_text(strip=True)
+
+            building_info.append({key: value})
+
+    return building_info
+
+
+def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
+    tabs_data = {"leasing": None, "description": None, "building": None, "suite": None}
+
+    for listing in listings:
+        try:
+
+            tabs = listing.pop("tabs", None)
+            if not tabs:
+                continue
+
+            tabs_data["leasing"] = get_leasing_info(tabs[0])
+            tabs_data["description"] = tabs[1].get_text(strip=True)
+            tabs_data["building"] = get_building_info(tabs[2])
+            # tabs_data["suite"] = get_suite_info(tabs[3])
+            listing.update(tabs_data)
+
+        except Exception as err:
+            logging.error(f"Error processing case data from {url}: {err}")
+
+    return listings
+
+
+def get_listings(
+    scraper: Scraper, rows: List[Dict[str, Optional[str]]]
+) -> List[Dict[str, Optional[str]]]:
+    for row in rows:
+        row_data = {"rooms": None, "tabs": None}
+
+        try:
+            res = scraper.fetch(row["url"])
+            soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
+
+            row_data["rooms"] = scraper.get_text_from_element(
+                soup, "div", attributes={"id": "suitemain"}
+            )
+
+            tab_container = soup.find("div", class_="tab_container")
+            tabs = tab_container.find_all("div", class_="tab_content")
+
+            if tabs:
+                # Only want first 4 for now
+                row_data["tabs"] = tabs[:4]
+
+            row.update(row_data)
+
+        except Exception as err:
+            logging.error(f"Error processing case data from {url}: {err}")
+
+    return rows
 
 
 def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
@@ -85,7 +179,6 @@ def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
                 continue
 
             # Generate listing URL
-            a_tag = row.find("a")
             row_data["url"] = urljoin("https://www.444rent.com", href)
 
             # Extract column data
@@ -107,7 +200,7 @@ def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
 
             all_rows.append(row_data)
 
-    return all_rows
+    return all_rows[:5]
 
 
 def get_tables(scraper: Scraper, url: str) -> List[Tag]:
@@ -136,7 +229,8 @@ def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     scraper = Scraper()
     scraper.add_function(get_tables)
     scraper.add_function(get_rows)
-    # scraper.add_function()
+    scraper.add_function(get_listings)
+    scraper.add_function(get_tab_content)
     data = scraper.execute(url)
 
     return data
@@ -146,4 +240,6 @@ if __name__ == "__main__":
     url = "https://www.444rent.com/apartments.asp"
 
     data = scrape(url)
-    print(data)
+    for d in data:
+        print(d)
+        print("\n\n")
