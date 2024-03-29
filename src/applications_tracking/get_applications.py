@@ -117,7 +117,6 @@ def get_cases(
     scraper: Scraper, applications: List[Dict[str, Optional[str]]]
 ) -> List[Dict[str, Optional[str]]]:
     """Get each case from a list of case urls and corresponding summaries"""
-    # applications = []
 
     for application in applications:
         application_data = {
@@ -134,8 +133,9 @@ def get_cases(
             soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
 
             application_data["title"] = scraper.get_text_from_element(
-                soup, "h1", "title"
+                soup, "h1", class_name="title"
             )
+
             application_data["id"] = generate_hash(application_data["title"])
 
             # Get and parse the last time it was updated
@@ -145,7 +145,7 @@ def get_cases(
             application_data["last_updated"] = scraper.parse_iso8601_date(last_updated)
 
             application_data["update_notice"] = scraper.get_text_from_element(
-                soup, "div", "c-planning-notification"
+                soup, "div", class_name="c-planning-notification"
             )
 
             # Get the html for the sections and contact info for futher processing
@@ -165,7 +165,6 @@ def get_cases(
             logging.error(
                 f"Error processing case data from {application['url']}: {err}"
             )
-            # applications.append(None)
 
     return applications
 
