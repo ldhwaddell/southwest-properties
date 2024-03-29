@@ -181,7 +181,7 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
         rows = soup.find_all("div", class_="views-row")
 
         for row in rows:
-            row_data = {"url": None, "summary": None}
+            row_data = {"active": True, "url": None, "summary": None}
             href = scraper.get_attribute_from_element(row, "a", "href")
 
             # Skip broken links
