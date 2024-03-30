@@ -5,12 +5,13 @@ import time
 
 from datetime import datetime
 from itertools import cycle
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from urllib.parse import urlparse, unquote
 
 
 import requests
 from bs4 import BeautifulSoup, Tag
+from fake_headers import Headers
 from fake_useragent import UserAgent
 
 
@@ -21,7 +22,7 @@ logger = logging.basicConfig(
 )
 
 
-PROXIES_API = "https://api.proxyscrape.com/v3/free-proxy-list/get?request=getproxies&protocol=http&proxy_format=protocolipport&format=text&timeout=20000"
+PROXIES_API = "https://api.proxyscrape.com/v3/free-proxy-list/get?request=displayproxies&country=ca&proxy_format=protocolipport&format=text&timeout=20000"
 
 
 class Scraper:
@@ -46,12 +47,14 @@ class Scraper:
     def fetch(
         self,
         url: str,
+        method: str = "GET",
+        json_data: Optional[Dict[str, Any]] = None,
         use_proxy: bool = False,
         allow_redirects: bool = False,
         stream: bool = False,
         retries: int = 3,
         retry_sleep_sec: int = 5,
-        timeout: int = 5,
+        timeout: int = 10,
     ) -> Optional[requests.Response]:
         """Fetches URL with desired options"""
         if use_proxy and not self.proxies:
@@ -63,14 +66,30 @@ class Scraper:
             user_agent = UserAgent()
             headers = {"User-Agent": user_agent.random}
             try:
-                response = requests.get(
-                    url,
-                    proxies=proxy,
-                    timeout=timeout,
-                    allow_redirects=allow_redirects,
-                    stream=stream,
-                    headers=headers,
-                )
+
+                if method.upper() == "GET":
+                    response = requests.get(
+                        url,
+                        proxies=proxy,
+                        timeout=timeout,
+                        allow_redirects=allow_redirects,
+                        stream=stream,
+                        headers=headers,
+                    )
+                elif method.upper() == "POST":
+                    response = requests.post(
+                        url,
+                        json=json_data,
+                        proxies=proxy,
+                        timeout=timeout,
+                        allow_redirects=allow_redirects,
+                        stream=stream,
+                        headers=headers,
+                    )
+                else:
+                    logging.error(f"Unsupported method: {method}")
+                    return None
+
                 response.raise_for_status()
                 logging.info(f"Successfully fetched URL: {url}")
                 return response
@@ -145,12 +164,25 @@ class Scraper:
         """Add a function to the list of functions to execute."""
         self.functions.append(function)
 
-    def execute(self, input):
+    def execute(self, *args):
         """Execute the list of functions, passing the result of each as input to the next."""
-        result = input
-        for function in self.functions:
+        if not self.functions:
+            logging.error("No functions to execute.")
+            return None
+
+        # Initialize 'result' with the first function call using provided arguments
+        result = self.functions[0](self, *args)
+        if result is None:
+            logging.error(
+                f"Function {function.__name__} returned nothing. An error occurred"
+            )
+            return None
+
+        # Iterate over the rest of the functions, passing the previous result as the only argument
+        for function in self.functions[1:]:
             result = function(self, result)
-            if not result:
+
+            if result is None:
                 logging.error(
                     f"Function {function.__name__} returned nothing. An error occurred"
                 )
