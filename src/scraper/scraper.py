@@ -49,6 +49,7 @@ class Scraper:
         url: str,
         method: str = "GET",
         json_data: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
         use_proxy: bool = False,
         allow_redirects: bool = False,
         stream: bool = False,
@@ -57,14 +58,24 @@ class Scraper:
         timeout: int = 10,
     ) -> Optional[requests.Response]:
         """Fetches URL with desired options"""
+
         if use_proxy and not self.proxies:
             logging.error(f"'use_proxy' set to {use_proxy} but no proxies available.")
             return
 
+        # Default headers with randomized User-Agent
+        user_agent = UserAgent()
+        default_headers = {
+            "user-agent": user_agent.random,
+        }
+
+        # If custom headers are provided, update default headers with them
+        if headers:
+            default_headers.update(headers)
+
         for attempt in range(retries):
             proxy = next(self.proxy_pool, None) if use_proxy else None
-            user_agent = UserAgent()
-            headers = {"User-Agent": user_agent.random}
+
             try:
 
                 if method.upper() == "GET":
@@ -74,7 +85,7 @@ class Scraper:
                         timeout=timeout,
                         allow_redirects=allow_redirects,
                         stream=stream,
-                        headers=headers,
+                        headers=default_headers,
                     )
                 elif method.upper() == "POST":
                     response = requests.post(
@@ -84,7 +95,7 @@ class Scraper:
                         timeout=timeout,
                         allow_redirects=allow_redirects,
                         stream=stream,
-                        headers=headers,
+                        headers=default_headers,
                     )
                 else:
                     logging.error(f"Unsupported method: {method}")
