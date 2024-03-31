@@ -43,6 +43,7 @@ class Database:
             logging.error(f"Error creating tables: {e}")
 
     def show_tables(self):
+        print("CALLED")
         inspector = inspect(self.engine)
         tables = inspector.get_table_names()
         logging.info(f"Tables in the database: {tables}")
@@ -160,5 +161,8 @@ class Database:
 
 
 if __name__ == "__main__":
-    db = Database("sqlite:///southwest.db")
+    # db = Database("sqlite:///southwest.db")
+    db = Database("postgresql://airflow:airflow@localhost:5432/airflow")
+
     db.create_tables()
+    db.show_tables()

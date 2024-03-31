@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 
 from bs4 import BeautifulSoup, Tag
 
-from src.scraper.scraper import Scraper
+from data.scraper.scraper import Scraper
 
 # Set up logger
 logger = logging.basicConfig(

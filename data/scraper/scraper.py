@@ -11,7 +11,6 @@ from urllib.parse import urlparse, unquote
 
 import requests
 from bs4 import BeautifulSoup, Tag
-from fake_headers import Headers
 from fake_useragent import UserAgent
 
 
