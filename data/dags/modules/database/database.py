@@ -7,6 +7,10 @@ from sqlalchemy.orm import sessionmaker
 # from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
+from sqlalchemy.dialects.postgresql import insert
+
+
+from sqlalchemy.ext.automap import automap_base
 
 # from sqlalchemy import select, insert, update, bindparam
 
@@ -22,42 +26,61 @@ logger = logging.basicConfig(
 class Database:
     def __init__(self):
         postgres_pass = os.environ.get("POSTGRES_PASSWORD")
+        logging.info(postgres_pass)
         db_url = f"postgresql+psycopg2://airflow:southwest2024@postgres:5432/airflow"
         self.engine = create_engine(db_url)
+
+        # Use existing tables instead of creating models:
+        Base = automap_base()
+        Base.prepare(self.engine, reflect=True)
+        # Access the classes mapped to tables by class name
+        self.Applications = Base.classes.applications
+        self.ScrapedApplications = Base.classes.scraped_applications
+        self.ApplicationHistories = Base.classes.application_histories
+
         self.session_maker = sessionmaker(bind=self.engine)
         self.session: Session = self.session_maker()
 
-    def insert_applications(self, applications: List[dict]):
-        """Upserts applications into the applications table using raw SQL."""
-        upsert_statement = text("""
-            INSERT INTO applications (id, active, created_at, url, title, summary, last_updated, update_notice, request, proposal, process, status, documents_submitted_for_evaluation, contact_info)
-            VALUES (:id, :active, COALESCE(:created_at, NOW()), :url, :title, :summary, :last_updated, :update_notice, :request, :proposal, :process, :status, :documents_submitted_for_evaluation, :contact_info)
-            ON CONFLICT (id) DO UPDATE SET
-                active = EXCLUDED.active,
-                created_at = EXCLUDED.created_at,
-                url = EXCLUDED.url,
-                title = EXCLUDED.title,
-                summary = EXCLUDED.summary,
-                last_updated = EXCLUDED.last_updated,
-                update_notice = EXCLUDED.update_notice,
-                request = EXCLUDED.request,
-                proposal = EXCLUDED.proposal,
-                process = EXCLUDED.process,
-                status = EXCLUDED.status,
-                documents_submitted_for_evaluation = EXCLUDED.documents_submitted_for_evaluation,
-                contact_info = EXCLUDED.contact_info;
-        """)
+    def upsert_applications(self, applications: List[dict]):
+        """Upserts applications into the applications table."""
+
+        ScrapedApplications = self.ScrapedApplications
 
         try:
             for application in applications:
-                self.session.execute(upsert_statement, params=application)
+                # Prepare the insert statement
+                insert_stmt = insert(
+                    ScrapedApplications.__table__).values(**application)
+
+                # Prepare the on_conflict_do_update statement
+                # Assuming "id" is the primary key / unique identifier for conflict detection
+                # Adjust "constraint" to your table"s primary key constraint name if different
+                do_update_stmt = insert_stmt.on_conflict_do_update(
+                    # Directly using "id" as the conflict target
+                    index_elements=["id"],
+                    # Exclude "id" from the update
+                    set_={k: application[k] for k in application if k != "id"}
+                )
+
+                # Execute the upsert statement
+                self.session.execute(do_update_stmt)
+
             self.session.commit()
-            logging.info(
-                f"Successfully upserted {len(applications)} items into applications")
         except SQLAlchemyError as e:
             self.session.rollback()
             logging.error(
                 f"An error occurred during application upsertion: {e}")
+            raise SQLAlchemyError from e
+
+    # def insert_applications(self, applications: List[dict]):
+    #     """Upserts applications into the applications table using raw SQL."""
+
+    #     try:
+
+    #     except SQLAlchemyError as e:
+    #         self.session.rollback()
+    #         logging.error(
+    #             f"An error occurred during application upsertion: {e}")
 
 #     def get_active_applications(self) -> List[Application]:
 #         """returns all applications where active is true"""
