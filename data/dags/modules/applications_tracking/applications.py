@@ -216,7 +216,7 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 
             applications.append(row_data)
 
-        return applications
+        return applications[:3]
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
