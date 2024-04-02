@@ -10,6 +10,7 @@ from urllib.parse import urlparse, unquote
 
 
 import requests
+from airflow.exceptions import AirflowBadRequest
 from bs4 import BeautifulSoup, Tag
 from fake_useragent import UserAgent
 
@@ -40,8 +41,7 @@ class Scraper:
             return proxies
 
         except Exception as e:
-            logging.error(f"Failed to fetch proxies: {e}")
-            return []
+            raise AirflowBadRequest(f"Failed to fetch proxies: {e}")
 
     def fetch(
         self,
@@ -59,8 +59,8 @@ class Scraper:
         """Fetches URL with desired options"""
 
         if use_proxy and not self.proxies:
-            logging.error(f"'use_proxy' set to {use_proxy} but no proxies available.")
-            return
+            raise ValueError(
+                f"'use_proxy' set to {use_proxy} but no proxies available.")
 
         # Default headers with randomized User-Agent
         user_agent = UserAgent()
@@ -109,7 +109,7 @@ class Scraper:
                 logging.error(f"Trying attempt {attempt+1} of {retries}")
                 time.sleep(retry_sleep_sec)
 
-        raise Exception(f"Exceeded max retry num: {retries} failed")
+        raise requests.ConnectionError(f"Exceeded max retry num: {retries} failed")
 
     def get_text_from_element(
         self,
@@ -150,7 +150,8 @@ class Scraper:
             path_segments = parsed_url.path.split("/")
             address_segment_index = path_segments.index("place") + 1
             # Extract the address
-            address = unquote(path_segments[address_segment_index]).replace("+", " ")
+            address = unquote(
+                path_segments[address_segment_index]).replace("+", " ")
             return address
 
         return None
@@ -177,8 +178,7 @@ class Scraper:
     def execute(self, *args):
         """Execute the list of functions, passing the result of each as input to the next."""
         if not self.functions:
-            logging.error("No functions to execute.")
-            return None
+            raise ValueError("No functions to execute.")
 
         # Initialize 'result' with the first function call using provided arguments
         result = self.functions[0](self, *args)
