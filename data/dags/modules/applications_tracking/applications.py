@@ -36,46 +36,54 @@ def get_contact_info(
             "mailing_address": [],
             "attention": None,
         }
+        try:
+            # Every application has 2 contact info divs at the bottom
+            name_div, mailing_div = contact_info_html.find_all(
+                "div", class_="o-layout__item col-6"
+            )
 
-        # Every application has 2 contact info divs at the bottom
-        name_div, mailing_div = contact_info_html.find_all(
-            "div", class_="o-layout__item col-6"
-        )
+            # Extract name, telephone, fax, email
+            for p_tag in name_div.find_all("p", class_="u-text-small"):
+                if "text-bold" in p_tag["class"]:
+                    contact_info["name"] = p_tag.get_text(strip=True)
 
-        # Extract name, telephone, fax, email
-        for p_tag in name_div.find_all("p", class_="u-text-small"):
-            if "text-bold" in p_tag["class"]:
-                contact_info["name"] = p_tag.get_text(strip=True)
+                elif "Telephone:" in p_tag.get_text():
+                    contact_info["telephone"] = p_tag.find(
+                        "a").get_text(strip=True)
 
-            elif "Telephone:" in p_tag.get_text():
-                contact_info["telephone"] = p_tag.find(
-                    "a").get_text(strip=True)
+                elif "Fax:" in p_tag.get_text():
+                    contact_info["fax"] = p_tag.get_text(
+                        strip=True).replace("Fax:", "")
 
-            elif "Fax:" in p_tag.get_text():
-                contact_info["fax"] = p_tag.get_text(
-                    strip=True).replace("Fax:", "")
+                elif "Email:" in p_tag.get_text():
+                    contact_info["email"] = p_tag.find(
+                        "a").get_text(strip=True)
 
-            elif "Email:" in p_tag.get_text():
-                contact_info["email"] = p_tag.find("a").get_text(strip=True)
+            # Extract mailing address and attention
+            for p_tag in mailing_div.find_all("p", class_="u-text-small"):
+                if "Attention:" in p_tag.get_text():
+                    contact_info["attention"] = p_tag.get_text(strip=True).replace(
+                        "Attention:", ""
+                    )
 
-        # Extract mailing address and attention
-        for p_tag in mailing_div.find_all("p", class_="u-text-small"):
-            if "Attention:" in p_tag.get_text():
-                contact_info["attention"] = p_tag.get_text(strip=True).replace(
-                    "Attention:", ""
-                )
+                else:
+                    # Add other parts to the mailing address list
+                    contact_info["mailing_address"].append(
+                        p_tag.get_text(strip=True).replace("PO Box:", "")
+                    )
 
-            else:
-                # Add other parts to the mailing address list
-                contact_info["mailing_address"].append(
-                    p_tag.get_text(strip=True).replace("PO Box:", "")
-                )
+            # Join the address parts into a single string
+            contact_info["mailing_address"] = " ".join(
+                contact_info["mailing_address"])
 
-        # Join the address parts into a single string
-        contact_info["mailing_address"] = " ".join(
-            contact_info["mailing_address"])
+            # Serialize to string
+            application["contact_info"] = json.dumps(
+                contact_info)
 
-        application["contact_info"] = json.dumps(contact_info)
+        except Exception as err:
+            logging.error(
+                f"Error getting contact info from {application['url']}: {err}"
+            )
 
     return applications
 
@@ -91,14 +99,6 @@ def get_sections(
             if not sections:
                 continue
 
-            section_data = {
-                "request": None,
-                "proposal": None,
-                "process": None,
-                "status": None,
-                "documents_submitted_for_evaluation": None,
-            }
-
             for section in sections:
                 header: Tag = section.find("h2")
                 if header:
@@ -111,10 +111,8 @@ def get_sections(
                             text_parts.append(elem.get_text(strip=True))
 
                     joined_text = " ".join(text_parts).strip()
-                    section_data[section_title] = scraper.clean_whitespace(
+                    application[section_title] = scraper.clean_whitespace(
                         joined_text)
-
-            application.update(section_data)
 
         except Exception as err:
             logging.error(
@@ -130,47 +128,37 @@ def get_cases(
     """Get each case from a list of case urls and corresponding summaries"""
 
     for application in applications:
-        application_data = {
-            "title": None,
-            "id": None,
-            "last_updated": None,
-            "update_notice": None,
-            "sections_html": None,
-            "contact_info_html": None,
-        }
 
         try:
             res = scraper.fetch(application["url"])
             soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
 
-            application_data["title"] = scraper.get_text_from_element(
+            application["title"] = scraper.get_text_from_element(
                 soup, "h1", class_name="title"
             )
 
-            application_data["id"] = generate_hash(application_data["title"])
+            application["id"] = generate_hash(application["title"])
 
             # Get and parse the last time it was updated
             last_updated = scraper.get_attribute_from_element(
                 soup, "time", attribute="datetime", class_name="datetime"
             )
-            application_data["last_updated"] = scraper.parse_iso8601_date(
+            application["last_updated"] = scraper.parse_iso8601_date(
                 last_updated)
 
-            application_data["update_notice"] = scraper.get_text_from_element(
+            application["update_notice"] = scraper.get_text_from_element(
                 soup, "div", class_name="c-planning-notification"
             )
 
             # Get the html for the sections and contact info for futher processing
-            application_data["sections_html"] = soup.find_all(
+            application["sections_html"] = soup.find_all(
                 "div", class_="u-text-lighter"
             )
-            application_data["contact_info_html"] = soup.find(
+            application["contact_info_html"] = soup.find(
                 "div", class_="paragraph--type--contact-info"
             )
 
-            application.update(application_data)
-
-            logging.info(f"Scraped application: {application_data['title']}")
+            logging.info(f"Scraped application: {application['title']}")
             scraper.sleep()
 
         except Exception as err:
@@ -193,7 +181,24 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
         rows = soup.find_all("div", class_="views-row")
 
         for row in rows:
-            row_data = {"active": True, "url": None, "summary": None}
+            row_data = {
+                "active": True,
+                "url": None,
+                "summary": None,
+                "title": None,
+                "id": None,
+                "last_updated": None,
+                "update_notice": None,
+                "sections_html": None,
+                "contact_info_html": None,
+                "request": None,
+                "proposal": None,
+                "process": None,
+                "status": None,
+                "documents_submitted_for_evaluation": None,
+                "contact_info": None
+            }
+
             href = scraper.get_attribute_from_element(row, "a", "href")
 
             # Skip broken links
@@ -211,15 +216,16 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 
             applications.append(row_data)
 
-        return applications[:5]
+        return applications
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
-        return None
+        raise Exception from e
 
 
 def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     """Build and executed the scraper"""
+
     scraper = Scraper()
     scraper.add_function(get_rows)
     scraper.add_function(get_cases)
