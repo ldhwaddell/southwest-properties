@@ -5,7 +5,7 @@ import time
 
 from datetime import datetime
 from itertools import cycle
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from urllib.parse import urlparse, unquote
 
 
@@ -113,7 +113,7 @@ class Scraper:
 
     def get_text_from_element(
         self,
-        soup: BeautifulSoup | Tag,
+        soup: Union[BeautifulSoup, Tag],
         tag: str,
         attributes: Dict[str, str] = None,
         class_name: Optional[str] = None,
@@ -125,7 +125,7 @@ class Scraper:
 
     def get_attribute_from_element(
         self,
-        soup: BeautifulSoup | Tag,
+        soup: Union[BeautifulSoup, Tag],
         tag: str,
         attribute: str,
         class_name: Optional[str] = None,

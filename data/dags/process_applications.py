@@ -1,9 +1,14 @@
 from datetime import datetime
+from typing import List, Dict, Optional
 
 from airflow import DAG
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.decorators import task
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+# from airflow.operators.python import PythonOperator
 
-DAG_ID = "postgres_operator_dag"
+from modules.applications_tracking.applications import scrape
+
+DAG_ID = "applications_tracking_dag"
 
 with DAG(
     dag_id=DAG_ID,
@@ -12,11 +17,31 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    create_applications_tables = PostgresOperator(
-        task_id="create_applications_tables",
-        postgres_conn_id="pg_conn",
-        sql="sql/applications_tables_schemas.sql",
-    )
+    create_applications_tables = SQLExecuteQueryOperator(task_id="create_applications_tables",
+                                     conn_id="pg_conn",
+                                     sql="sql/applications_tables_schemas.sql",)
+    
+    
+    create_applications_tables
+
+    # create_applications_tables = PostgresOperator(
+    #     task_id="create_applications_tables",
+    #     postgres_conn_id="pg_conn",
+    #     sql="sql/applications_tables_schemas.sql",
+    # )
+
+    # @task()
+    # def extract() -> Optional[List[Dict]]:
+    #     url = "https://www.halifax.ca/business/planning-development/applications"
+
+    #     ...
+
+
+# Extract task gets the data
+
+#  Transform task cleans up any formatting
+
+# Load saves it to the db
 
     # populate_pet_table = PostgresOperator(
     #     task_id="populate_pet_table",
@@ -46,4 +71,4 @@ with DAG(
     #     postgres_conn_id="tutorial_pg_conn",
     # )
 
-    create_applications_tables  # >> populate_pet_table >> get_all_pets >> get_birth_date
+  # >> populate_pet_table >> get_all_pets >> get_birth_date

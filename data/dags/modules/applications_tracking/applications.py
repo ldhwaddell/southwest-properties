@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 
@@ -6,8 +7,8 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
-from src.utils import generate_hash
-from src.scraper.scraper import Scraper
+from modules.scraper.scraper import Scraper
+from modules.utils import generate_hash
 
 
 # Set up logger
@@ -47,10 +48,12 @@ def get_contact_info(
                 contact_info["name"] = p_tag.get_text(strip=True)
 
             elif "Telephone:" in p_tag.get_text():
-                contact_info["telephone"] = p_tag.find("a").get_text(strip=True)
+                contact_info["telephone"] = p_tag.find(
+                    "a").get_text(strip=True)
 
             elif "Fax:" in p_tag.get_text():
-                contact_info["fax"] = p_tag.get_text(strip=True).replace("Fax:", "")
+                contact_info["fax"] = p_tag.get_text(
+                    strip=True).replace("Fax:", "")
 
             elif "Email:" in p_tag.get_text():
                 contact_info["email"] = p_tag.find("a").get_text(strip=True)
@@ -69,7 +72,8 @@ def get_contact_info(
                 )
 
         # Join the address parts into a single string
-        contact_info["mailing_address"] = " ".join(contact_info["mailing_address"])
+        contact_info["mailing_address"] = " ".join(
+            contact_info["mailing_address"])
 
         application["contact_info"] = json.dumps(contact_info)
 
@@ -82,33 +86,40 @@ def get_sections(
     """Extract all relevant info from the sections html of the applications list"""
 
     for application in applications:
-        sections = application.pop("sections_html", None)
-        if not sections:
-            continue
+        try:
+            sections = application.pop("sections_html", None)
+            if not sections:
+                continue
 
-        section_data = {
-            "request": None,
-            "proposal": None,
-            "process": None,
-            "status": None,
-            "documents_submitted_for_evaluation": None,
-        }
+            section_data = {
+                "request": None,
+                "proposal": None,
+                "process": None,
+                "status": None,
+                "documents_submitted_for_evaluation": None,
+            }
 
-        for section in sections:
-            header: Tag = section.find("h2")
-            if header:
-                section_title = header.get_text().lower().strip().replace(" ", "_")
+            for section in sections:
+                header: Tag = section.find("h2")
+                if header:
+                    section_title = header.get_text().lower().strip().replace(" ", "_")
 
-                # Avoid rescraping the h2 tag that contains the title of section
-                text_parts = []
-                for elem in section.children:
-                    if isinstance(elem, Tag) and elem.name != "h2":
-                        text_parts.append(elem.get_text(strip=True))
+                    # Avoid rescraping the h2 tag that contains the title of section
+                    text_parts = []
+                    for elem in section.children:
+                        if isinstance(elem, Tag) and elem.name != "h2":
+                            text_parts.append(elem.get_text(strip=True))
 
-                joined_text = " ".join(text_parts).strip()
-                section_data[section_title] = scraper.clean_whitespace(joined_text)
+                    joined_text = " ".join(text_parts).strip()
+                    section_data[section_title] = scraper.clean_whitespace(
+                        joined_text)
 
-        application.update(section_data)
+            application.update(section_data)
+
+        except Exception as err:
+            logging.error(
+                f"Error getting sections from {application['url']}: {err}"
+            )
 
     return applications
 
@@ -142,7 +153,8 @@ def get_cases(
             last_updated = scraper.get_attribute_from_element(
                 soup, "time", attribute="datetime", class_name="datetime"
             )
-            application_data["last_updated"] = scraper.parse_iso8601_date(last_updated)
+            application_data["last_updated"] = scraper.parse_iso8601_date(
+                last_updated)
 
             application_data["update_notice"] = scraper.get_text_from_element(
                 soup, "div", class_name="c-planning-notification"
@@ -199,7 +211,7 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 
             applications.append(row_data)
 
-        return applications
+        return applications[:5]
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
@@ -216,7 +228,3 @@ def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     data = scraper.execute(url)
 
     return data
-
-
-# if __name__ == "__main__":
-#     main()
