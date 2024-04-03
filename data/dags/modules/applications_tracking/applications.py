@@ -1,4 +1,3 @@
-import hashlib
 import json
 import logging
 
@@ -216,7 +215,7 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
 
             applications.append(row_data)
 
-        return applications[:3]
+        return applications
 
     except Exception as e:
         logging.error(f"Unable to get URL: {url}. Error: {e}")
@@ -234,3 +233,10 @@ def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
     data = scraper.execute(url)
 
     return data
+
+
+if __name__ == "__main__":
+    url = "https://www.halifax.ca/business/planning-development/applications"
+
+    data = scrape(url)
+    print(data)
