@@ -39,6 +39,8 @@ class Database:
             raise ValueError(
                 f"Table '{table_name}' not found in the database.")
 
+        logging.info(f"Received {len(applications)} items to upsert")
+
         try:
             for application_data in applications:
                 # Use the table object for the insert statement
@@ -46,7 +48,6 @@ class Database:
                     **application_data)
 
                 do_update_stmt = insert_stmt.on_conflict_do_update(
-                    # Assuming 'id' is the column you want to conflict on
                     index_elements=['id'],
                     set_={k: application_data[k]
                           for k in application_data if k != 'id'}
@@ -168,6 +169,9 @@ class Database:
                 app.id for app in active_applications)
 
             applications_to_upsert = []
+
+            logging.info(
+                f"Received {len(scraped_applications)} applications to update")
 
             for app in scraped_applications:
                 application_data = {
