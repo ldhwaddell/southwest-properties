@@ -24,7 +24,7 @@ with DAG(
     start_date=datetime(2024, 1, 1),
     schedule="@once",
     catchup=False,
-    default_args=default_args
+    default_args=default_args,
 ) as dag:
 
     create_applications_tables = SQLExecuteQueryOperator(
@@ -63,4 +63,9 @@ with DAG(
     compare_and_update_task = compare_and_update()
 
     # Set the task dependencies
-    create_applications_tables >> extract_task >> compare_and_update_task >> drop_scraped_applications_table
+    (
+        create_applications_tables
+        >> extract_task
+        >> compare_and_update_task
+        >> drop_scraped_applications_table
+    )

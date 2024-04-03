@@ -19,6 +19,7 @@ logger = logging.basicConfig(
 class Database:
     def __init__(self):
         postgres_pass = os.environ.get("POSTGRES_PASSWORD")
+        tet = os.environ.get("AIRFLOW__DATABASE__SQL_ALCHEMY_CONN")
         logging.info(postgres_pass)
         db_url = f"postgresql+psycopg2://airflow:southwest2024@postgres:5432/airflow"
         self.engine = create_engine(db_url)
@@ -36,21 +37,20 @@ class Database:
         # ScrapedApplicationTable = ScrapedApplication.__table__
         table = self.metadata.tables.get(table_name)
         if table is None:
-            raise ValueError(
-                f"Table '{table_name}' not found in the database.")
+            raise ValueError(f"Table '{table_name}' not found in the database.")
 
         logging.info(f"Received {len(applications)} items to upsert")
 
         try:
             for application_data in applications:
                 # Use the table object for the insert statement
-                insert_stmt = insert(table).values(
-                    **application_data)
+                insert_stmt = insert(table).values(**application_data)
 
                 do_update_stmt = insert_stmt.on_conflict_do_update(
-                    index_elements=['id'],
-                    set_={k: application_data[k]
-                          for k in application_data if k != 'id'}
+                    index_elements=["id"],
+                    set_={
+                        k: application_data[k] for k in application_data if k != "id"
+                    },
                 )
 
                 # Execute the upsert statement
@@ -59,8 +59,7 @@ class Database:
             self.session.commit()
         except SQLAlchemyError as e:
             self.session.rollback()
-            logging.error(
-                f"An error occurred during application upsertion: {e}")
+            logging.error(f"An error occurred during application upsertion: {e}")
             raise
 
     def get_scraped_applications(self):
@@ -70,21 +69,20 @@ class Database:
             return applications
 
         except SQLAlchemyError as e:
-            logging.error(
-                f"An error occurred while fetching scraped applications: {e}")
+            logging.error(f"An error occurred while fetching scraped applications: {e}")
             raise
 
     def get_active_applications(self):
         """Fetches all active records from the applications table using ORM style."""
         try:
             # This is now consistent with get_scraped_applications
-            active_applications = self.session.query(
-                Application).filter(Application.active == True).all()
+            active_applications = (
+                self.session.query(Application).filter(Application.active == True).all()
+            )
             return active_applications
 
         except SQLAlchemyError as e:
-            logging.error(
-                f"An error occurred while fetching active applications: {e}")
+            logging.error(f"An error occurred while fetching active applications: {e}")
             raise
 
     def archive_applications(self, application_ids: Set[str]):
@@ -93,36 +91,38 @@ class Database:
             # Ensure there are IDs to process
             if application_ids:
 
-                query = update(Application).where(
-                    Application.id.in_(application_ids)).values(active=False)
+                query = (
+                    update(Application)
+                    .where(Application.id.in_(application_ids))
+                    .values(active=False)
+                )
 
                 result = self.session.execute(query)
                 self.session.commit()
 
-                logging.info(
-                    f"Successfully archived {result.rowcount} applications")
+                logging.info(f"Successfully archived {result.rowcount} applications")
             else:
                 logging.info("No applications to archive")
 
         except SQLAlchemyError as e:
             self.session.rollback()
-            logging.error(
-                f"An error occurred while archiving applications: {e}")
+            logging.error(f"An error occurred while archiving applications: {e}")
             raise
 
     def compare_application(self, scraped_application: ScrapedApplication):
         """Compares an existing record to the scraped one. Records any differences"""
         try:
             # Existing entry
-            query = select(Application).where(
-                Application.id == scraped_application.id
-            )
+            query = select(Application).where(Application.id == scraped_application.id)
             existing_record = self.session.execute(query).scalar_one_or_none()
 
             change_records: List[ApplicationHistory] = []
 
             application_data = {
-                key: value for key, value in scraped_application.__dict__.items() if not key.startswith('_')}
+                key: value
+                for key, value in scraped_application.__dict__.items()
+                if not key.startswith("_")
+            }
 
             # Compare existing entry to keys from scraped application
             for key, value in application_data.items():
@@ -158,24 +158,28 @@ class Database:
 
         except SQLAlchemyError as e:
             self.session.rollback()
-            logging.error(
-                f"An error occurred while comparing applications: {e}")
+            logging.error(f"An error occurred while comparing applications: {e}")
             raise
 
-    def update(self, scraped_applications: List[ScrapedApplication], active_applications: List[Application]):
+    def update(
+        self,
+        scraped_applications: List[ScrapedApplication],
+        active_applications: List[Application],
+    ):
         """Updates the database based on scraped applications."""
         try:
-            active_applications_ids = set(
-                app.id for app in active_applications)
+            active_applications_ids = set(app.id for app in active_applications)
 
             applications_to_upsert = []
 
-            logging.info(
-                f"Received {len(scraped_applications)} applications to update")
+            logging.info(f"Received {len(scraped_applications)} applications to update")
 
             for app in scraped_applications:
                 application_data = {
-                    key: value for key, value in app.__dict__.items() if not key.startswith('_')}
+                    key: value
+                    for key, value in app.__dict__.items()
+                    if not key.startswith("_")
+                }
 
                 if app.id in active_applications_ids:
                     # Removing it from active ids means those left in active ids are inactive

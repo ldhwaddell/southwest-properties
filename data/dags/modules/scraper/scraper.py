@@ -60,7 +60,8 @@ class Scraper:
 
         if use_proxy and not self.proxies:
             raise ValueError(
-                f"'use_proxy' set to {use_proxy} but no proxies available.")
+                f"'use_proxy' set to {use_proxy} but no proxies available."
+            )
 
         # Default headers with randomized User-Agent
         user_agent = UserAgent()
@@ -150,8 +151,7 @@ class Scraper:
             path_segments = parsed_url.path.split("/")
             address_segment_index = path_segments.index("place") + 1
             # Extract the address
-            address = unquote(
-                path_segments[address_segment_index]).replace("+", " ")
+            address = unquote(path_segments[address_segment_index]).replace("+", " ")
             return address
 
         return None

@@ -47,16 +47,13 @@ def get_contact_info(
                     contact_info["name"] = p_tag.get_text(strip=True)
 
                 elif "Telephone:" in p_tag.get_text():
-                    contact_info["telephone"] = p_tag.find(
-                        "a").get_text(strip=True)
+                    contact_info["telephone"] = p_tag.find("a").get_text(strip=True)
 
                 elif "Fax:" in p_tag.get_text():
-                    contact_info["fax"] = p_tag.get_text(
-                        strip=True).replace("Fax:", "")
+                    contact_info["fax"] = p_tag.get_text(strip=True).replace("Fax:", "")
 
                 elif "Email:" in p_tag.get_text():
-                    contact_info["email"] = p_tag.find(
-                        "a").get_text(strip=True)
+                    contact_info["email"] = p_tag.find("a").get_text(strip=True)
 
             # Extract mailing address and attention
             for p_tag in mailing_div.find_all("p", class_="u-text-small"):
@@ -72,12 +69,10 @@ def get_contact_info(
                     )
 
             # Join the address parts into a single string
-            contact_info["mailing_address"] = " ".join(
-                contact_info["mailing_address"])
+            contact_info["mailing_address"] = " ".join(contact_info["mailing_address"])
 
             # Serialize to string
-            application["contact_info"] = json.dumps(
-                contact_info)
+            application["contact_info"] = json.dumps(contact_info)
 
         except Exception as err:
             logging.error(
@@ -110,13 +105,10 @@ def get_sections(
                             text_parts.append(elem.get_text(strip=True))
 
                     joined_text = " ".join(text_parts).strip()
-                    application[section_title] = scraper.clean_whitespace(
-                        joined_text)
+                    application[section_title] = scraper.clean_whitespace(joined_text)
 
         except Exception as err:
-            logging.error(
-                f"Error getting sections from {application['url']}: {err}"
-            )
+            logging.error(f"Error getting sections from {application['url']}: {err}")
 
     return applications
 
@@ -142,17 +134,14 @@ def get_cases(
             last_updated = scraper.get_attribute_from_element(
                 soup, "time", attribute="datetime", class_name="datetime"
             )
-            application["last_updated"] = scraper.parse_iso8601_date(
-                last_updated)
+            application["last_updated"] = scraper.parse_iso8601_date(last_updated)
 
             application["update_notice"] = scraper.get_text_from_element(
                 soup, "div", class_name="c-planning-notification"
             )
 
             # Get the html for the sections and contact info for futher processing
-            application["sections_html"] = soup.find_all(
-                "div", class_="u-text-lighter"
-            )
+            application["sections_html"] = soup.find_all("div", class_="u-text-lighter")
             application["contact_info_html"] = soup.find(
                 "div", class_="paragraph--type--contact-info"
             )
@@ -195,7 +184,7 @@ def get_rows(scraper: Scraper, url: str) -> Optional[Dict]:
                 "process": None,
                 "status": None,
                 "documents_submitted_for_evaluation": None,
-                "contact_info": None
+                "contact_info": None,
             }
 
             href = scraper.get_attribute_from_element(row, "a", "href")

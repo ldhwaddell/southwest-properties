@@ -22,8 +22,7 @@ class Application(Base):
     status = Column(Text, nullable=True)
     documents_submitted_for_evaluation = Column(Text, nullable=True)
     contact_info = Column(Text, nullable=True)
-    history = relationship("ApplicationHistory",
-                           cascade="all, delete, delete-orphan")
+    history = relationship("ApplicationHistory", cascade="all, delete, delete-orphan")
 
 
 class ApplicationHistory(Base):
