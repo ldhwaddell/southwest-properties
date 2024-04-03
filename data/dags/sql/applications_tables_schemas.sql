@@ -42,5 +42,5 @@ CREATE TABLE IF NOT EXISTS application_histories (
     changed VARCHAR,
     original TEXT,
     updated TEXT,
-    FOREIGN KEY (application_id) REFERENCES applications(id)
+    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
 );
