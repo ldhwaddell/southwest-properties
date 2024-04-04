@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model application_histories {
+  id             Int          @id @default(autoincrement())
+  application_id String       @db.VarChar(64)
+  created_at     DateTime?    @default(now()) @db.Timestamptz(6)
+  changed        String?      @db.VarChar
+  original       String?
+  updated        String?
+  applications   applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model applications {
+  id                                 String                  @id @db.VarChar(64)
+  active                             Boolean?
+  created_at                         DateTime?               @default(now()) @db.Timestamptz(6)
+  url                                String?                 @db.VarChar
+  title                              String?
+  summary                            String?
+  last_updated                       DateTime?               @db.Timestamptz(6)
+  update_notice                      String?
+  request                            String?
+  proposal                           String?
+  process                            String?
+  status                             String?
+  documents_submitted_for_evaluation String?
+  contact_info                       String?
+  application_histories              application_histories[]
+}
