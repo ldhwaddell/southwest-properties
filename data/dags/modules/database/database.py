@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.dialects.postgresql import insert
 
-from modules.database.models import Application, ApplicationHistory, ScrapedApplication
+from modules.database.models import Application, ScrapedApplication
 
 # Set up logger
 logger = logging.basicConfig(
@@ -18,10 +18,7 @@ logger = logging.basicConfig(
 
 class Database:
     def __init__(self):
-        postgres_pass = os.environ.get("POSTGRES_PASSWORD")
-        tet = os.environ.get("AIRFLOW__DATABASE__SQL_ALCHEMY_CONN")
-        logging.info(postgres_pass)
-        db_url = f"postgresql+psycopg2://airflow:southwest2024@postgres:5432/airflow"
+        db_url = os.environ.get("AIRFLOW__DATABASE__SQL_ALCHEMY_CONN")
         self.engine = create_engine(db_url)
         self.metadata = MetaData(bind=self.engine)
         self.metadata.reflect(bind=self.engine)
@@ -33,8 +30,6 @@ class Database:
         Upserts applications into the applications table. Cannot do traditional insert as idempotency is
         required if task retries
         """
-
-        # ScrapedApplicationTable = ScrapedApplication.__table__
         table = self.metadata.tables.get(table_name)
         if table is None:
             raise ValueError(f"Table '{table_name}' not found in the database.")
@@ -42,6 +37,7 @@ class Database:
         logging.info(f"Received {len(applications)} items to upsert")
 
         try:
+
             for application_data in applications:
                 # Use the table object for the insert statement
                 insert_stmt = insert(table).values(**application_data)
@@ -109,23 +105,21 @@ class Database:
             logging.error(f"An error occurred while archiving applications: {e}")
             raise
 
-    def compare_application(self, scraped_application: ScrapedApplication):
+    def compare_application(
+        self, scraped_application: Dict
+    ) -> List[Dict]:
         """Compares an existing record to the scraped one. Records any differences"""
         try:
             # Existing entry
-            query = select(Application).where(Application.id == scraped_application.id)
+            query = select(Application).where(
+                Application.id == scraped_application["id"]
+            )
             existing_record = self.session.execute(query).scalar_one_or_none()
-
-            change_records: List[ApplicationHistory] = []
-
-            application_data = {
-                key: value
-                for key, value in scraped_application.__dict__.items()
-                if not key.startswith("_")
-            }
+            change_records: List[Dict] = []
 
             # Compare existing entry to keys from scraped application
-            for key, value in application_data.items():
+            for key, value in scraped_application.items():
+
                 # Skip created_at as it will always be different
                 if key == "created_at":
                     continue
@@ -135,26 +129,19 @@ class Database:
                     hasattr(existing_record, key)
                     and getattr(existing_record, key) != value
                 ):
-                    # Record the change
-                    change_record = ApplicationHistory(
-                        application_id=existing_record.id,
-                        changed=key,
-                        original=str(getattr(existing_record, key)),
-                        updated=str(value),
-                    )
 
-                    # Update the DB record
-                    setattr(existing_record, key, value)
+                    change_record = {
+                        "application_id": existing_record.id,
+                        "changed": key,
+                        "original": str(getattr(existing_record, key)),
+                        "updated": str(value),
+                    }
 
                     change_records.append(change_record)
 
-            # If changes were detected, add them to the session and commit everything together
-            if change_records:
-                self.session.add_all(change_records)
-                self.session.commit()
-                logging.info(
-                    f"{len(change_records)} changes detected and recorded for application ID {existing_record.id}."
-                )
+            logging.info(f"{len(change_records)} changes found in {existing_record.id}")
+
+            return change_records
 
         except SQLAlchemyError as e:
             self.session.rollback()
@@ -171,6 +158,7 @@ class Database:
             active_applications_ids = set(app.id for app in active_applications)
 
             applications_to_upsert = []
+            changed_records = []
 
             logging.info(f"Received {len(scraped_applications)} applications to update")
 
@@ -184,16 +172,21 @@ class Database:
                 if app.id in active_applications_ids:
                     # Removing it from active ids means those left in active ids are inactive
                     active_applications_ids.remove(app.id)
-                    # Check for changes
-                    self.compare_application(app)
-                else:
-                    # For new add them to the list for upsertion.
-                    applications_to_upsert.append(application_data)
 
+                    # Check for changes
+                    changes = self.compare_application(application_data)
+                    if changes:
+                        changed_records.extend(changes)
+
+                applications_to_upsert.append(application_data)
+
+            # Use upsert for all insertions incase of retries
             self.upsert("applications", applications_to_upsert)
+            self.upsert("application_histories", changed_records)
             self.archive_applications(active_applications_ids)
 
         except SQLAlchemyError as e:
+            self.session.rollback()
             logging.error(f"An error occurred during update: {e}")
             raise
         finally:
@@ -201,5 +194,9 @@ class Database:
 
 
 if __name__ == "__main__":
+    url = "https://www.halifax.ca/business/planning-development/applications"
     db = Database()
-    db.update()
+    scraped_applications = db.get_scraped_applications()
+    active_applications = db.get_active_applications()
+
+    db.update(scraped_applications, active_applications)
