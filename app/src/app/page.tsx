@@ -15,12 +15,15 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 
+import { ModeToggle } from "@/components/mode-toggle"
+
 import { getApplications } from "@/db/utils"
 
 export const revalidate = 3600
 
 export default async function Home() {
   const applications = await getApplications()
+
   return (
     <Tabs defaultValue="account" className="w-[400px]">
       <TabsList className="grid w-full grid-cols-2">
@@ -53,6 +56,7 @@ export default async function Home() {
             <CardDescription>
               Change your password here. After saving, yoll be logged out.
             </CardDescription>
+            <ModeToggle/>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="space-y-1">
