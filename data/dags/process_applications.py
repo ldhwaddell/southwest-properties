@@ -22,7 +22,7 @@ default_args = {
 with DAG(
     dag_id=DAG_ID,
     start_date=datetime(2024, 1, 1),
-    schedule="@once",
+    schedule="@daily",
     catchup=False,
     default_args=default_args,
 ) as dag:
