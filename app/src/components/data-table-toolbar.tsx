@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 
 import { statuses } from "@/app/data/statuses";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
-import { File } from "lucide-react";
 
 import { DataTableViewOptions } from "./data-table-view-options";
+import { ExportExcel } from "./export-excel";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -52,10 +52,7 @@ export function DataTableToolbar<TData>({
         )}
       </div>
       <DataTableViewOptions table={table} />
-      <Button variant="outline" size="sm" className="h-8 lg:flex ml-2">
-        <File className="h-3.5 w-3.5" />
-        <span className="sr-only sm:not-sr-only">Export</span>
-      </Button>
+      <ExportExcel table={table} defaultFileName="applications" />
     </div>
   );
 }

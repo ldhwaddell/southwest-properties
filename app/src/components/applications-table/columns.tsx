@@ -4,6 +4,23 @@ import { Checkbox } from "../ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import type { applications } from "@prisma/client";
 
+type GetValueFunction<T> = (row: T) => string | null | undefined;
+
+function truncateText<T>(
+  row: T,
+  getValue: GetValueFunction<T>,
+  maxLength: number,
+  noValueMessage: string
+): JSX.Element {
+  const text = getValue(row);
+  const truncatedText =
+    text && text.length > maxLength
+      ? `${text.substring(0, maxLength)}...`
+      : text;
+
+  return <div>{text ? truncatedText : noValueMessage}</div>;
+}
+
 export const columns: ColumnDef<applications>[] = [
   {
     accessorKey: "id",
@@ -106,20 +123,72 @@ export const columns: ColumnDef<applications>[] = [
   {
     accessorKey: "summary",
     header: "Summary",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("summary"), 100, "No Summary"),
   },
   {
     accessorKey: "proposal",
     header: "Proposal",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("proposal"), 100, "No Proposal"),
+  },
+  {
+    accessorKey: "update_notice",
+    header: "Update Notice",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("update_notice"),
+        100,
+        "No Update Notice"
+      ),
+  },
+  {
+    accessorKey: "request",
+    header: "Request",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("request"), 100, "No Request"),
+  },
+  {
+    accessorKey: "process",
+    header: "Process",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("process"), 100, "No Process"),
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("status"), 100, "No Status"),
+  },
+  {
+    accessorKey: "documents_submitted_for_evaluation",
+    header: "Documents",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("documents_submitted_for_evaluation"),
+        100,
+        "No Documents"
+      ),
+  },
+  {
+    accessorKey: "contact_info",
+    header: "Contact",
     cell: ({ row }) => {
-      const proposalText: string = row.getValue("proposal");
-      const MAX_LENGTH = 100;
+      const contactInfoStr: string = row.getValue("contact_info");
 
-      const truncatedText =
-        proposalText && proposalText.length > MAX_LENGTH
-          ? proposalText.substring(0, MAX_LENGTH) + "..."
-          : proposalText;
+      try {
+        const parsedContactInfo = JSON.parse(contactInfoStr || "{}");
 
-      return proposalText ? <div>{truncatedText}</div> : <div>No Proposal</div>;
+        if (parsedContactInfo && parsedContactInfo.name) {
+          return <div>{parsedContactInfo.name}</div>;
+        } else {
+          return <div>No contact</div>;
+        }
+      } catch (e) {
+        return <div>No contact</div>;
+      }
     },
   },
 ];
