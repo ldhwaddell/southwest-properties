@@ -33,12 +33,12 @@ export default async function Home() {
           <Card>
             <CardHeader>
               <CardTitle>Account</CardTitle>
-              <CardDescription>This shows all applications that have been found since the </CardDescription>
+              <CardDescription>
+                This shows all applications that have been found since the{" "}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-            <DataTable columns={columns} data={applications} />
-
-
+                <DataTable columns={columns} data={applications} />
             </CardContent>
           </Card>
         </TabsContent>

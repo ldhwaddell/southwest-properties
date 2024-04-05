@@ -5,6 +5,15 @@ import type { applications } from "@prisma/client";
 
 export const columns: ColumnDef<applications>[] = [
   {
+    accessorKey: "title",
+    header: "Title",
+    cell: ({ row }) => {
+      const title: string = row.getValue("title");
+
+      return title ? <div className="w-80">{title}</div> : <div>No Title</div>;
+    },
+  },
+  {
     accessorKey: "active",
     header: "Active",
   },
