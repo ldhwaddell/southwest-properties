@@ -1,9 +1,14 @@
 "use client";
+import * as React from "react";
 
 import {
   ColumnDef,
+  ColumnFiltersState,
   flexRender,
   getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -17,11 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { File } from "lucide-react";
-
-import { Button } from "../ui/button";
 import { DataTablePagination } from "../data-table-pagination";
-import { DataTableViewOptions } from "../data-table-view-options";
+import { DataTableToolbar } from "../data-table-toolbar";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -32,22 +34,26 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getFacetedRowModel: getFacetedRowModel(),
+    state: {
+      columnFilters,
+    },
   });
 
   return (
     <>
-      <div className="flex justify-end space-x-2">
-        <DataTableViewOptions table={table} />
-        <Button variant="outline" size="sm" className="h-8 lg:flex">
-          <File className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only">Export</span>
-        </Button>
-      </div>
+      <DataTableToolbar table={table} />
       <div className="rounded-md border">
         {/* Modify h-full to make table take up entire screen but not more */}
         <div className="h-[55vh] relative overflow-auto">

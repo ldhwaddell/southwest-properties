@@ -1,9 +1,33 @@
 "use client";
 
+import { Checkbox } from "../ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
-import type { applications } from "@prisma/client";
+import type { TransformedApplication } from "@/app/types";
 
-export const columns: ColumnDef<applications>[] = [
+export const columns: ColumnDef<TransformedApplication>[] = [
+  {
+    accessorKey: "id",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => {
+      return (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      );
+    },
+  },
+
   {
     accessorKey: "title",
     header: "Title",
@@ -16,6 +40,9 @@ export const columns: ColumnDef<applications>[] = [
   {
     accessorKey: "active",
     header: "Active",
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id))
+    },
   },
   {
     accessorKey: "url",
