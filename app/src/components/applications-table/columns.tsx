@@ -2,9 +2,9 @@
 
 import { Checkbox } from "../ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
-import type { TransformedApplication } from "@/app/types";
+import type { applications } from "@prisma/client";
 
-export const columns: ColumnDef<TransformedApplication>[] = [
+export const columns: ColumnDef<applications>[] = [
   {
     accessorKey: "id",
     header: ({ table }) => (
@@ -26,6 +26,7 @@ export const columns: ColumnDef<TransformedApplication>[] = [
         />
       );
     },
+    enableHiding: false,
   },
 
   {
@@ -36,13 +37,20 @@ export const columns: ColumnDef<TransformedApplication>[] = [
 
       return title ? <div className="w-80">{title}</div> : <div>No Title</div>;
     },
+    enableHiding: false,
   },
   {
     accessorKey: "active",
     header: "Active",
-    filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id))
+    cell: ({ row }) => {
+      const isActive = row.getValue("active");
+      return <div>{isActive ? "True" : "False"}</div>;
     },
+    filterFn: (row, id, value) => {
+      const rowValue = row.getValue(id) ? "True" : "False";
+      return value.includes(rowValue);
+    },
+    enableHiding: false,
   },
   {
     accessorKey: "url",

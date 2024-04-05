@@ -1,5 +1,4 @@
 import { Header } from "@/components/header";
-import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { columns } from "@/components/applications-table/columns";
-import { DataTable } from "@/components/applications-table/data-table";
+import { ApplicationsDataTable } from "@/components/applications-table/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { getApplications } from "@/db/utils";
@@ -38,7 +37,7 @@ export default async function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-                <DataTable columns={columns} data={applications} />
+              <ApplicationsDataTable columns={columns} data={applications} />
             </CardContent>
           </Card>
         </TabsContent>

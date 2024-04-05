@@ -25,15 +25,15 @@ import {
 import { DataTablePagination } from "../data-table-pagination";
 import { DataTableToolbar } from "../data-table-toolbar";
 
-interface DataTableProps<TData, TValue> {
+interface ApplicationsDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
 }
 
-export function DataTable<TData, TValue>({
+export function ApplicationsDataTable<TData, TValue>({
   columns,
   data,
-}: DataTableProps<TData, TValue>) {
+}: ApplicationsDataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
