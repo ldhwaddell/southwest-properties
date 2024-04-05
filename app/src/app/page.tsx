@@ -1,3 +1,5 @@
+import { Header } from "@/components/header";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -7,18 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
+import { columns } from "@/components/applications-table/columns";
+import { DataTable } from "@/components/applications-table/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { ModeToggle } from "@/components/mode-toggle";
-import { Header } from "@/components/header";
-
 import { getApplications } from "@/db/utils";
+import type { applications } from "@prisma/client";
 
 export const revalidate = 3600;
 
 export default async function Home() {
-  const applications = await getApplications();
+  const applications: applications[] = await getApplications();
 
   return (
     <div className="p-2.5 m-2.5 min-h-screen">
@@ -32,14 +33,13 @@ export default async function Home() {
           <Card>
             <CardHeader>
               <CardTitle>Account</CardTitle>
-              <CardDescription>{`${applications}`}</CardDescription>
+              <CardDescription>This shows all applications that have been found since the </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="space-y-1">ociencioen</div>
+            <DataTable columns={columns} data={applications} />
+
+
             </CardContent>
-            <CardFooter>
-              <Button>Save changes</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
         <TabsContent value="rentals">
