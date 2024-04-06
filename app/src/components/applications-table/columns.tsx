@@ -19,7 +19,7 @@ function truncateText<T>(
       ? `${text.substring(0, maxLength)}...`
       : text;
 
-  return <div>{text ? truncatedText : noValueMessage}</div>;
+  return <div className="w-80">{text ? truncatedText : noValueMessage}</div>;
 }
 
 export const columns: ColumnDef<applications>[] = [
@@ -122,12 +122,9 @@ export const columns: ColumnDef<applications>[] = [
 
       // Format the date using toLocaleString
       const formattedDate = dateObject.toLocaleString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
         year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
       });
       // Suppress hydration warning because dates are weird
       return <div suppressHydrationWarning>{formattedDate}</div>;
