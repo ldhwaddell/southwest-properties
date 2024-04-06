@@ -42,10 +42,6 @@ export function ExportExcel<TData>({
   const [fileName, setFileName] = useState<string>(defaultFileName);
   const [allColumnsChecked, setAllColumnsChecked] = useState<boolean>(false);
 
-  const handleFileNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFileName(event.target.value);
-  };
-
   const generateExcelFile = async () => {
     const fileType =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
@@ -99,7 +95,7 @@ export function ExportExcel<TData>({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        {/* Disable button is no rows are selected */}
+        {/* Disable button if no rows are selected */}
         <Button
           variant="outline"
           size="sm"
@@ -114,8 +110,8 @@ export function ExportExcel<TData>({
         <DialogHeader>
           <DialogTitle>Export Excel File</DialogTitle>
           <DialogDescription>
-            Name your file here and choose what columns you want. Click download
-            to save the file
+            Name your file here and choose from all columns or those you have
+            visible. Click download to save the file
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -127,7 +123,9 @@ export function ExportExcel<TData>({
               id="fileName"
               className="col-span-3"
               value={fileName}
-              onChange={handleFileNameChange}
+              onChange={(e) => {
+                setFileName(e.target.value);
+              }}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-5">
