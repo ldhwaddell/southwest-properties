@@ -3,6 +3,7 @@
 import { Checkbox } from "../ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import type { applications } from "@prisma/client";
+import { cn } from "@/lib/utils";
 
 type GetValueFunction<T> = (row: T) => string | null | undefined;
 
@@ -61,8 +62,20 @@ export const columns: ColumnDef<applications>[] = [
     header: "Active",
     cell: ({ row }) => {
       const isActive = row.getValue("active");
-      return <div>{isActive ? "True" : "False"}</div>;
+
+      return (
+        <div
+          className={cn("rounded-full px-2 text-white", {
+            "bg-green-500": isActive,
+            "bg-red-500": !isActive,
+          })}
+        >
+          {" "}
+          {isActive ? "True" : "False"}
+        </div>
+      );
     },
+
     filterFn: (row, id, value) => {
       const rowValue = row.getValue(id) ? "True" : "False";
       return value.includes(rowValue);
