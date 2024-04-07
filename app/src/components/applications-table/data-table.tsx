@@ -44,6 +44,12 @@ export function ApplicationsDataTable<TData, TValue>({
     null
   );
 
+  // Increase default page size
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 20,
+  });
+
   // Event handler for opening the dialog with the clicked row's data
   const handleRowClick = (row: Row<TData>) => {
     setSelectedRowData(row);
@@ -59,8 +65,10 @@ export function ApplicationsDataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedRowModel: getFacetedRowModel(),
+    onPaginationChange: setPagination,
     state: {
       columnFilters,
+      pagination,
     },
   });
 
