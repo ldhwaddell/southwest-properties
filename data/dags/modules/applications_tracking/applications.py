@@ -90,26 +90,38 @@ def get_sections(
 
     for application in applications:
         try:
-            sections = application.pop("sections_html", None)
+            sections: List[Tag] = application.pop("sections_html", None)
             if not sections:
                 continue
 
             for section in sections:
-                header: Tag = section.find("h2")
+
+                header = section.find("h2")
                 if header:
                     section_title = header.get_text().lower().strip().replace(" ", "_")
+
+                    # Remove h2 title tags
+                    for h2 in section.find_all("h2", class_="h3"):
+                        h2.extract()
+
                     inner_html = section.decode_contents()
 
                     # Removes the spacers
                     html_no_spaces = re.sub(r"<p>\s*_{10,}\s*</p>", "", inner_html)
-                    # Remove the h2 header tags
-                    html_no_h2_tags = re.sub(
-                        r"<h2.*?>.*?</h2>", "", html_no_spaces, flags=re.DOTALL
-                    )
 
-                    application[section_title] = scraper.clean_whitespace(
-                        html_no_h2_tags
-                    )
+                    if html_no_spaces:
+                        soup = BeautifulSoup(html_no_spaces, "html.parser")
+                        for a_tag in soup.find_all("a", href=True):
+                            # If using a realtive tag, make sure it start with halifax
+                            if not a_tag["href"].startswith(("http", "cdn")):
+                                a_tag["href"] = "https://halifax.ca" + a_tag["href"]
+
+                        # Convert the soup object back to a string after modification
+                        modified_html = str(soup)
+
+                        application[section_title] = scraper.clean_whitespace(
+                            modified_html
+                        )
 
         except Exception as err:
             logging.error(f"Error getting sections from {application['url']}: {err}")
@@ -150,9 +162,10 @@ def get_cases(
             )
             application["last_updated"] = scraper.parse_iso8601_date(last_updated)
 
-            application["update_notice"] = scraper.clean_whitespace(
-                get_update_notice(soup)
-            )
+            # Get the last updated notice if there is one
+            update_notice = get_update_notice(soup)
+            if update_notice:
+                application["update_notice"] = scraper.clean_whitespace(update_notice)
 
             # Get the html for the sections and contact info for futher processing
             application["sections_html"] = soup.find_all("div", class_="u-text-lighter")
@@ -242,4 +255,7 @@ if __name__ == "__main__":
     url = "https://www.halifax.ca/business/planning-development/applications"
 
     data = scrape(url)
-    print(data)
+    data = data
+    for d in data:
+        for key, val in d.items():
+            print(f"{key}: {val}\n\n")
