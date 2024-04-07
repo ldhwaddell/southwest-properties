@@ -13,6 +13,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 
 import type { applications } from "@prisma/client";
+import DOMPurify from "dompurify";
 
 import { formatSnakeCaseToTitle } from "@/utils";
 
@@ -42,19 +43,24 @@ export function RowDialog<TData>({
           </DialogHeader>
 
           <ScrollArea className="grid gap-4 py-4 h-full">
-            {Object.entries(rowData).map(([key, value]) => (
-              <div key={key} className="mb-4">
-                <h3 className="text-lg font-semibold">
-                  {formatSnakeCaseToTitle(key)}
-                </h3>
-                <p>
-                  {value !== null && value !== undefined
-                    ? value.toString()
-                    : "Does not exist"}
-                </p>
-                <Separator className="mt-1" />
-              </div>
-            ))}
+            {Object.entries(rowData).map(([key, value]) => {
+              const content =
+                value !== null && value !== undefined
+                  ? value.toString()
+                  : "Does not exist";
+
+              const sanitizedContent = DOMPurify.sanitize(content);
+
+              return (
+                <div key={key} className="mb-4 row-display-p">
+                  <h3 className="text-lg font-semibold">
+                    {formatSnakeCaseToTitle(key)}
+                  </h3>
+                  <p dangerouslySetInnerHTML={{ __html: sanitizedContent }}></p>
+                  <Separator className="mt-1" />
+                </div>
+              );
+            })}
           </ScrollArea>
           <DialogFooter>
             <DialogClose asChild>

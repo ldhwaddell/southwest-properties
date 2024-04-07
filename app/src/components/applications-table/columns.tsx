@@ -19,7 +19,7 @@ function truncateText<T>(
       ? `${text.substring(0, maxLength)}...`
       : text;
 
-  return <div className="w-80">{text ? truncatedText : noValueMessage}</div>;
+  return <div className="w-full md:w-80 break-words">{text ? truncatedText : noValueMessage}</div>;
 }
 
 export const columns: ColumnDef<applications>[] = [
