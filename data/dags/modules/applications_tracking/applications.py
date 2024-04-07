@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from typing import Optional, Dict, List
 from urllib.parse import urljoin
@@ -97,20 +98,33 @@ def get_sections(
                 header: Tag = section.find("h2")
                 if header:
                     section_title = header.get_text().lower().strip().replace(" ", "_")
+                    inner_html = section.decode_contents()
 
-                    # Avoid rescraping the h2 tag that contains the title of section
-                    text_parts = []
-                    for elem in section.children:
-                        if isinstance(elem, Tag) and elem.name != "h2":
-                            text_parts.append(elem.get_text(strip=True))
+                    # Removes the spacers
+                    html_no_spaces = re.sub(r"<p>\s*_{10,}\s*</p>", "", inner_html)
+                    # Remove the h2 header tags
+                    html_no_h2_tags = re.sub(
+                        r"<h2.*?>.*?</h2>", "", html_no_spaces, flags=re.DOTALL
+                    )
 
-                    joined_text = " ".join(text_parts).strip()
-                    application[section_title] = scraper.clean_whitespace(joined_text)
+                    application[section_title] = scraper.clean_whitespace(
+                        html_no_h2_tags
+                    )
 
         except Exception as err:
             logging.error(f"Error getting sections from {application['url']}: {err}")
 
     return applications
+
+
+def get_update_notice(soup: BeautifulSoup) -> Optional[str]:
+    """Finds and extracts the html that makes up the update notice, if it exists"""
+    element_container = soup.find("div", class_="c-planning-notification")
+    if not element_container:
+        return None
+
+    text_container = element_container.find("p", class_="u-text-body-color")
+    return text_container.decode_contents()
 
 
 def get_cases(
@@ -136,8 +150,8 @@ def get_cases(
             )
             application["last_updated"] = scraper.parse_iso8601_date(last_updated)
 
-            application["update_notice"] = scraper.get_text_from_element(
-                soup, "div", class_name="c-planning-notification"
+            application["update_notice"] = scraper.clean_whitespace(
+                get_update_notice(soup)
             )
 
             # Get the html for the sections and contact info for futher processing
