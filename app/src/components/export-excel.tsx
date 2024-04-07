@@ -19,21 +19,12 @@ import { Table } from "@tanstack/react-table";
 import { Workbook } from "exceljs";
 import * as FileSaver from "file-saver";
 
+import { formatSnakeCaseToTitle } from "@/utils";
+
 interface ExportExcelProps<TData> {
   table: Table<TData>;
   defaultFileName: string;
 }
-
-const formatSnakeCaseToTitle = (text: string): string => {
-  const words = text.split("_");
-
-  // Capitalize the first letter of each word and join them with a space
-  const formattedText = words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
-  return formattedText;
-};
 
 export function ExportExcel<TData>({
   table,

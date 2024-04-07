@@ -87,12 +87,6 @@ export const columns: ColumnDef<applications>[] = [
     header: "URL",
     cell: ({ row }) => {
       const url: string = row.getValue("url");
-      const MAX_LENGTH = 30;
-
-      const truncatedURL =
-        url && url.length > MAX_LENGTH
-          ? url.substring(0, MAX_LENGTH) + "..."
-          : url;
 
       return url ? (
         <a
@@ -102,7 +96,7 @@ export const columns: ColumnDef<applications>[] = [
           className="text-blue-600 hover:text-blue-800"
           title={url}
         >
-          {truncatedURL}
+          Link
         </a>
       ) : (
         <div>No URL</div>

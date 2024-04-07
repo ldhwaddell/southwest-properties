@@ -1,5 +1,5 @@
 "use client";
-import * as React from "react";
+import React, { useState } from "react";
 
 import {
   ColumnDef,
@@ -11,6 +11,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
+  Row,
 } from "@tanstack/react-table";
 
 import {
@@ -24,6 +25,7 @@ import {
 
 import { DataTablePagination } from "../data-table-pagination";
 import { DataTableToolbar } from "../data-table-toolbar";
+import { RowDialog } from "../data-table-row-display";
 
 interface ApplicationsDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -34,9 +36,20 @@ export function ApplicationsDataTable<TData, TValue>({
   columns,
   data,
 }: ApplicationsDataTableProps<TData, TValue>) {
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  // State to hold the selected row data
+  const [selectedRowData, setSelectedRowData] = useState<Row<TData> | null>(
+    null
   );
+
+  // Event handler for opening the dialog with the clicked row's data
+  const handleRowClick = (row: Row<TData>) => {
+    setSelectedRowData(row);
+    setIsDialogOpen(true);
+  };
+
   const table = useReactTable({
     data,
     columns,
@@ -82,6 +95,7 @@ export function ApplicationsDataTable<TData, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    onClick={() => handleRowClick(row)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
@@ -105,6 +119,13 @@ export function ApplicationsDataTable<TData, TValue>({
               )}
             </TableBody>
           </Table>
+          {selectedRowData && (
+            <RowDialog
+              isOpen={isDialogOpen}
+              onClose={() => setIsDialogOpen(false)}
+              row={selectedRowData}
+            />
+          )}
         </div>
       </div>
 
