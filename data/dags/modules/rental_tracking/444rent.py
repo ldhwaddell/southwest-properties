@@ -56,7 +56,7 @@ def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
                 leasing_info[category] = values
 
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Error getting leasing info: {e}")
     finally:
         return leasing_info
 
@@ -106,10 +106,10 @@ def get_building_info(tab: Tag) -> List[str | Dict[str, str]]:
                 )
                 value = pair[1].get_text(strip=True)
 
-                building_info.append({key: value})
+                building_info.append({key: value.replace("\xa0", " ")})
 
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Error getting building info: {e}")
     finally:
         return building_info
 
@@ -166,14 +166,14 @@ def get_suite_info(tab: Tag) -> Dict[str, List[str]]:
             ):
                 key = title_table.get_text(strip=True).lower()
                 suite_info[key] = [
-                    td.get_text(strip=True) for td in detail_table.find_all("td")
+                    td.get_text(strip=True).replace("\xa0", " ") for td in detail_table.find_all("td")
                 ]
             elif title_table and not title_table.get("bgcolor"):
                 # If there's a title table without a detail table following, add contents to miscellaneous
-                suite_info["miscellaneous"].append(title_table.get_text(strip=True))
+                suite_info["miscellaneous"].append(title_table.get_text(strip=True).replace("\xa0", " "))
 
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logging.error(f"Error getting suite info: {e}")
     finally:
         return suite_info
 
@@ -196,7 +196,7 @@ def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
             listing.update(tabs_data)
 
         except Exception as err:
-            logging.error(f"Error processing case data from {url}: {err}")
+            logging.error(f"Error processing tab content from {url}: {err}")
 
     return listings
 
@@ -206,27 +206,29 @@ def get_listings(
 ) -> List[Dict[str, Optional[str]]]:
     """Scrape listing content from the rows of the main table"""
     for row in rows:
-        row_data = {"rooms": None, "tabs": None}
 
         try:
             res = scraper.fetch(row["url"])
-            soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
 
-            row_data["rooms"] = scraper.get_text_from_element(
+            soup = BeautifulSoup(res.content, "html.parser")
+
+            row["rooms"] = scraper.get_text_from_element(
                 soup, "div", attributes={"id": "suitemain"}
             )
-
             tab_container = soup.find("div", class_="tab_container")
             tabs = tab_container.find_all("div", class_="tab_content")
 
             if tabs:
                 # Only want first 4 for now
-                row_data["tabs"] = tabs[:4]
+                row["tabs"] = tabs[:4]
 
-            row.update(row_data)
+            logging.info(f"Scraped application: {row['url']}")
 
         except Exception as err:
-            logging.error(f"Error processing case data from {url}: {err}")
+            logging.error(f"Error processing listing data from {row['url']}: {err}")
+            print(res.content)
+        finally:
+            scraper.sleep(min=1, max=2)
 
     return rows
 
@@ -236,16 +238,22 @@ def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
     all_rows = []
 
     for table in tables:
-        rows = table.find_all("tr", bgcolor=True)
+        rows: List[Tag] = table.find_all("tr", bgcolor=True)
 
         for row in rows:
             row_data = {
                 "url": None,
+                ######
+                "management": "Paramount Management",
+                "contact_info": None,
+                "rooms": None,
+                "tabs": None,
+                ######
                 "building": None,
                 "unit": None,
                 "location": None,
-                "area": None,
-                "available": None,
+                "square_feet": None,
+                "available_date": None,
                 "price": None,
             }
 
@@ -260,25 +268,25 @@ def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
             row_data["url"] = urljoin("https://www.444rent.com", href)
 
             # Extract column data
-            columns = row.find_all("td")
-            row_data["building"] = scraper.clean_whitespace(
-                columns[0].get_text(strip=True)
-            )
-            row_data["unit"] = scraper.clean_whitespace(columns[1].get_text(strip=True))
-            row_data["location"] = scraper.clean_whitespace(
-                columns[2].get_text(strip=True)
-            )
-            row_data["area"] = scraper.clean_whitespace(columns[3].get_text(strip=True))
-            row_data["available"] = scraper.clean_whitespace(
-                columns[4].get_text(strip=True)
-            )
-            row_data["price"] = scraper.clean_whitespace(
-                columns[5].get_text(strip=True)
-            )
+            columns: List[Tag] = row.find_all("td")
+
+            fields = [
+                "building",
+                "unit",
+                "location",
+                "square_feet",
+                "available_date",
+                "price",
+            ]
+
+            for i, field in enumerate(fields):
+                row_data[field] = scraper.clean_whitespace(
+                    columns[i].get_text(strip=True)
+                )
 
             all_rows.append(row_data)
 
-    return all_rows[:5]
+    return all_rows
 
 
 def get_tables(scraper: Scraper, url: str) -> List[Tag]:
@@ -286,7 +294,7 @@ def get_tables(scraper: Scraper, url: str) -> List[Tag]:
     tables = []
 
     try:
-        res = scraper.fetch(url, allow_redirects=True)
+        res = scraper.fetch(url)
         soup = BeautifulSoup(res.content, "html.parser")
 
         tables = soup.find_all("table", {"bgcolor": "#ffffff"})
