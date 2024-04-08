@@ -63,8 +63,8 @@ class Scraper:
                 f"'use_proxy' set to {use_proxy} but no proxies available."
             )
 
-        # Default headers with randomized User-Agent
-        user_agent = UserAgent()
+        # Default headers with randomized PC User-Agent
+        user_agent = UserAgent(platforms="pc")
         default_headers = {
             "user-agent": user_agent.random,
         }
@@ -184,7 +184,7 @@ class Scraper:
         result = self.functions[0](self, *args)
         if result is None:
             logging.error(
-                f"Function {function.__name__} returned nothing. An error occurred"
+                f"Function {self.functions[0].__name__} returned nothing. An error occurred"
             )
             return None
 
