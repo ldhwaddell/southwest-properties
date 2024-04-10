@@ -2,12 +2,10 @@ import logging
 import os
 from typing import List, Dict, Set
 
-from sqlalchemy import create_engine, select, MetaData, update
+from sqlalchemy import create_engine, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.dialects.postgresql import insert
-
-from modules.database.models import Application, ScrapedApplication
 
 # Set up logger
 logger = logging.basicConfig(
@@ -20,19 +18,25 @@ class Database:
     def __init__(self):
         db_url = os.environ.get("AIRFLOW__DATABASE__SQL_ALCHEMY_CONN")
         self.engine = create_engine(db_url)
-        self.metadata = MetaData(bind=self.engine)
-        self.metadata.reflect(bind=self.engine)
         self.session_maker = sessionmaker(bind=self.engine)
         self.session: Session = self.session_maker()
 
-    def upsert(self, table_name: str, data: List[Dict]):
+    def select_all(self, table):
+        """Selects all records from a table"""
+        try:
+            stmt = select(table)
+            results = self.session.execute(stmt)
+            return results.scalars()
+
+        except SQLAlchemyError as e:
+            logging.error(f"An error occurred while fetching all tables: {e}")
+            raise
+
+    def upsert(self, table, data: List[Dict]):
         """
         Upserts data into the desired table table. Cannot do traditional insert as idempotency is
         required if task retries
         """
-        table = self.metadata.tables.get(table_name)
-        if table is None:
-            raise ValueError(f"Table '{table_name}' not found in the database.")
 
         logging.info(f"Received {len(data)} items to upsert")
 
@@ -44,6 +48,7 @@ class Database:
 
                 do_update_stmt = insert_stmt.on_conflict_do_update(
                     index_elements=["id"],
+                    # Update everything but ID
                     set_={k: d[k] for k in d if k != "id"},
                 )
 
@@ -56,65 +61,56 @@ class Database:
             logging.error(f"An error occurred during {table} upsertion: {e}")
             raise
 
-    def get_scraped_applications(self):
-        """Fetches all records from the scraped_applications table."""
+    def get(self, table, column, condition):
+        """Gets records that match a desired condition"""
         try:
-            applications = self.session.query(ScrapedApplication).all()
-            return applications
+            stmt = select(table).where(column == condition)
+            result = self.session.execute(stmt)
+
+            return result.scalars()
 
         except SQLAlchemyError as e:
-            logging.error(f"An error occurred while fetching scraped applications: {e}")
-            raise
-
-    def get_active_applications(self):
-        """Fetches all active records from the applications table using ORM style."""
-        try:
-            # This is now consistent with get_scraped_applications
-            active_applications = (
-                self.session.query(Application).filter(Application.active == True).all()
+            logging.error(
+                f"An error occurred while getting records from {table.__tablename__} on column {column} with condition {condition}: {e}"
             )
-            return active_applications
-
-        except SQLAlchemyError as e:
-            logging.error(f"An error occurred while fetching active applications: {e}")
             raise
 
-    def archive_applications(self, application_ids: Set[str]):
-        """Sets active to false for all the passed application ids"""
+    def archive(self, table, column, ids: Set[str]):
+        """Sets active to false for all the passed record ids"""
         try:
             # Ensure there are IDs to process
-            if application_ids:
+            if ids:
+                values_to_update = {column: False}
 
-                query = (
-                    update(Application)
-                    .where(Application.id.in_(application_ids))
-                    .values(active=False)
-                )
+                stmt = update(table).where(table.id.in_(ids)).values(values_to_update)
 
-                result = self.session.execute(query)
+                result = self.session.execute(stmt)
                 self.session.commit()
 
-                logging.info(f"Successfully archived {result.rowcount} applications")
+                logging.info(f"Successfully archived {result.rowcount} records")
             else:
-                logging.info("No applications to archive")
+                logging.info("No records to archive")
 
         except SQLAlchemyError as e:
             self.session.rollback()
             logging.error(f"An error occurred while archiving applications: {e}")
             raise
 
-    def compare_application(self, scraped_application: Dict) -> List[Dict]:
+    def compare_record(
+        self, existing_records_table, scraped_record: Dict
+    ) -> List[Dict]:
         """Compares an existing record to the scraped one. Records any differences"""
         try:
             # Existing entry
-            query = select(Application).where(
-                Application.id == scraped_application["id"]
+            stmt = select(existing_records_table).where(
+                existing_records_table.id == scraped_record["id"]
             )
-            existing_record = self.session.execute(query).scalar_one_or_none()
+            existing_record = self.session.execute(stmt).scalar_one_or_none()
+
             change_records: List[Dict] = []
 
             # Compare existing entry to keys from scraped application
-            for key, value in scraped_application.items():
+            for key, value in scraped_record.items():
 
                 # Skip created_at as it will always be different
                 if key == "created_at":
@@ -138,61 +134,58 @@ class Database:
             logging.info(f"{len(change_records)} changes found in {existing_record.id}")
 
             return change_records
-
         except SQLAlchemyError as e:
             self.session.rollback()
             logging.error(f"An error occurred while comparing applications: {e}")
             raise
 
-    def update(
+    def update_records(
         self,
-        scraped_applications: List[ScrapedApplication],
-        active_applications: List[Application],
+        insert_table,
+        changes_table,
+        archive_field,
+        scraped_records,
+        existing_records,
     ):
-        """Updates the database based on scraped applications."""
+        """Updates the database based on scraped listings."""
         try:
-            active_applications_ids = set(app.id for app in active_applications)
+            existing_records_ids = set(record.id for record in existing_records)
 
-            applications_to_upsert = []
+            records_to_upsert = []
             changed_records = []
+            count = 0
 
-            logging.info(f"Received {len(scraped_applications)} applications to update")
+            for record in scraped_records:
+                count += 1
 
-            for app in scraped_applications:
-                application_data = {
+                record_data = {
                     key: value
-                    for key, value in app.__dict__.items()
+                    for key, value in record.__dict__.items()
                     if not key.startswith("_")
                 }
 
-                if app.id in active_applications_ids:
-                    # Removing it from active ids means those left in active ids are inactive
-                    active_applications_ids.remove(app.id)
-
+                if record.id in existing_records_ids:
+                    # Removing it from existings ids means those left in existing ids are inactive
+                    existing_records_ids.remove(record.id)
                     # Check for changes
-                    changes = self.compare_application(application_data)
+                    changes = self.compare_record(insert_table, record_data)
                     if changes:
                         changed_records.extend(changes)
 
-                applications_to_upsert.append(application_data)
+                records_to_upsert.append(record_data)
+
+            logging.info(f"Received {count} records to update")
 
             # Use upsert for all insertions incase of retries
-            self.upsert("applications", applications_to_upsert)
-            self.upsert("application_histories", changed_records)
-            self.archive_applications(active_applications_ids)
+            self.upsert(insert_table, records_to_upsert)
+            self.upsert(changes_table, changed_records)
+            self.archive(insert_table, archive_field, existing_records_ids)
 
         except SQLAlchemyError as e:
             self.session.rollback()
-            logging.error(f"An error occurred during update: {e}")
+            logging.error(
+                f"An error occurred during update of listings on {insert_table}: {e}"
+            )
             raise
         finally:
             self.session.close()
-
-
-if __name__ == "__main__":
-    url = "https://www.halifax.ca/business/planning-development/applications"
-    db = Database()
-    scraped_applications = db.get_scraped_applications()
-    active_applications = db.get_active_applications()
-
-    db.update(scraped_applications, active_applications)
