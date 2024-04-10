@@ -9,7 +9,10 @@ from typing import Optional, Dict, Any, Union
 from urllib.parse import urlparse, unquote
 
 
+from click import command
 import requests
+from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from airflow.exceptions import AirflowBadRequest
 from bs4 import BeautifulSoup, Tag
 from fake_useragent import UserAgent
@@ -30,6 +33,7 @@ class Scraper:
         self.proxies = self.fetch_proxies()
         self.proxy_pool = cycle(self.proxies) if self.proxies else None
         self.functions = []
+        self.driver = None
 
     def fetch_proxies(self) -> list:
         """Fetch list of proxies from ProxyScrape and return as list of dicts."""
@@ -42,6 +46,42 @@ class Scraper:
 
         except Exception as e:
             raise AirflowBadRequest(f"Failed to fetch proxies: {e}")
+
+    def build_web_driver(self):
+        """Builds and returns a Remote WebDriver with specified options."""
+        options = webdriver.ChromeOptions()
+        user_agent = UserAgent(platforms="pc")
+        options.add_argument(f"user-agent={user_agent.random}")
+        options.add_argument("--headless")
+        options.add_argument("window-size=1920,1080")
+        options.add_argument("--no-sandbox")
+        logging.info("Successfully built webdriver")
+
+        command_executor = "http://remote_chromedriver:4444/wd/hub"
+        self.driver = webdriver.Remote(command_executor, options=options)
+
+    def quit_web_driver(self):
+        """Safely quits the WebDriver, handling any exceptions."""
+        try:
+            self.driver.quit()
+            logging.info("Driver successfully quit")
+        except WebDriverException as e:
+            logging.error(f"Failed to close WebDriver: {e}")
+
+    def headless_fetch(self, url: str):
+        """Accepts a selenium Driver and uses it to extract the page sources of the url provided"""
+        try:
+            if not self.driver:
+                logging.info("No driver found. Building...")
+                self.build_web_driver()
+
+            self.driver.get(url)
+            logging.info(f"Successfully headless fetched: {url}")
+            return self.driver.page_source
+
+        except WebDriverException as e:
+            logging.error(f"Failed to get {url}: {e}")
+            raise
 
     def fetch(
         self,
