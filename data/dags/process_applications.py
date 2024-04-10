@@ -6,6 +6,7 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 from modules.applications_tracking.applications import scrape
 from modules.database.database import Database
+from modules.database.models import Application, ApplicationHistory, ScrapedApplication
 
 DAG_ID = "applications_tracking_dag"
 
@@ -41,15 +42,21 @@ with DAG(
         url = "https://www.halifax.ca/business/planning-development/applications"
         db = Database()
         applications = scrape(url)
-        db.upsert("scraped_applications", applications)
+        db.upsert(ScrapedApplication, applications)
 
     @task(task_id="compare_and_update", retries=3)
     def compare_and_update():
         """Compare scraped applications with those from DB, save any changes"""
         db = Database()
-        scraped_applications = db.get_scraped_applications()
-        active_applications = db.get_active_applications()
-        db.update(scraped_applications, active_applications)
+        scraped_applications = db.select_all(ScrapedApplication)
+        active_applications = db.get(Application, Application.active, True)
+        db.update_records(
+            Application,
+            ApplicationHistory,
+            Application.active,
+            scraped_applications,
+            active_applications,
+        )
 
     drop_scraped_applications_table = SQLExecuteQueryOperator(
         task_id="drop_scraped_applications_table",
