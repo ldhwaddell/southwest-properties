@@ -44,7 +44,9 @@ def get_building_name(building: str) -> str:
     elif "6016 pepperell" in building:
         return "The George"
     elif "7037 mumford" in building:
-        return "The George"
+        return "West22 Living"
+    elif "1254 hollis" in building:
+        return "Acadia Suites"
     else:
         return building
 
