@@ -25,28 +25,26 @@ class Database:
         self.session_maker = sessionmaker(bind=self.engine)
         self.session: Session = self.session_maker()
 
-    def upsert(self, table_name: str, applications: List[Dict]):
+    def upsert(self, table_name: str, data: List[Dict]):
         """
-        Upserts applications into the applications table. Cannot do traditional insert as idempotency is
+        Upserts data into the desired table table. Cannot do traditional insert as idempotency is
         required if task retries
         """
         table = self.metadata.tables.get(table_name)
         if table is None:
             raise ValueError(f"Table '{table_name}' not found in the database.")
 
-        logging.info(f"Received {len(applications)} items to upsert")
+        logging.info(f"Received {len(data)} items to upsert")
 
         try:
 
-            for application_data in applications:
+            for d in data:
                 # Use the table object for the insert statement
-                insert_stmt = insert(table).values(**application_data)
+                insert_stmt = insert(table).values(**d)
 
                 do_update_stmt = insert_stmt.on_conflict_do_update(
                     index_elements=["id"],
-                    set_={
-                        k: application_data[k] for k in application_data if k != "id"
-                    },
+                    set_={k: d[k] for k in d if k != "id"},
                 )
 
                 # Execute the upsert statement
@@ -55,7 +53,7 @@ class Database:
             self.session.commit()
         except SQLAlchemyError as e:
             self.session.rollback()
-            logging.error(f"An error occurred during application upsertion: {e}")
+            logging.error(f"An error occurred during {table} upsertion: {e}")
             raise
 
     def get_scraped_applications(self):
@@ -105,9 +103,7 @@ class Database:
             logging.error(f"An error occurred while archiving applications: {e}")
             raise
 
-    def compare_application(
-        self, scraped_application: Dict
-    ) -> List[Dict]:
+    def compare_application(self, scraped_application: Dict) -> List[Dict]:
         """Compares an existing record to the scraped one. Records any differences"""
         try:
             # Existing entry
