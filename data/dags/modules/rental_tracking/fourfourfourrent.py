@@ -43,9 +43,10 @@ def get_building_name(building: str) -> str:
         return "Flynn Flats"
     elif "6016 pepperell" in building:
         return "The George"
+    elif "7037 mumford" in building:
+        return "The George"
     else:
         return building
-
 
 
 def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
