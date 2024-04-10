@@ -1,10 +1,10 @@
+import json
 import logging
-import re
-from typing import Dict, List, Any
+from typing import Dict, List, Optional
 
 from bs4 import BeautifulSoup, Tag
 
-from data.scraper.scraper import Scraper
+from modules.scraper.scraper import Scraper
 
 # Set up logger
 logger = logging.basicConfig(
@@ -12,73 +12,9 @@ logger = logging.basicConfig(
     format="%(asctime)s %(name)-8s %(levelname)-8s [%(funcName)s:%(lineno)d] %(message)s",
 )
 
-# Payload data for fetch
-json_data = {
-    "Map": {
-        "BoundingBox": {
-            "LowerRight": {
-                "Latitude": 43.25112,
-                "Longitude": -61.15951,
-            },
-            "UpperLeft": {
-                "Latitude": 46.6022,
-                "Longitude": -65.14205,
-            },
-        },
-        "CountryCode": "CA",
-    },
-    "Geography": {
-        "ID": "td9ygfc",
-        "Display": "Halifax, NS",
-        "GeographyType": 2,
-        "Address": {
-            "City": "Halifax",
-            "CountryCode": "CAN",
-            "County": "Halifax",
-            "State": "NS",
-        },
-        "Location": {
-            "Latitude": 44.592,
-            "Longitude": -61.954,
-        },
-        "BoundingBox": {
-            "LowerRight": {
-                "Latitude": 43.90746,
-                "Longitude": -59.67046,
-            },
-            "UpperLeft": {
-                "Latitude": 45.27587,
-                "Longitude": -64.2372,
-            },
-        },
-        "v": 68579,
-    },
-    "Listing": {},
-    "Paging": {
-        "Page": "1",
-    },
-    "IsBoundedSearch": True,
-    "ResultSeed": 83590,
-    "Options": 0,
-    "CountryAbbreviation": "CA",
-}
 
-# Default headers to help stop scraper from being found
-headers = {
-    "accept": "application/json, text/javascript, */*; q=0.01",
-    "accept-language": "en-US,en;q=0.9",
-    "content-type": "application/json",
-    "dnt": "1",
-    "origin": "https://www.apartments.com",
-    "referer": "https://www.apartments.com/halifax-ns/",
-    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "x-requested-with": "XMLHttpRequest",
-}
+def remove_letters(str: str) -> int:
+    return "".join(i for i in str if i.isdigit())
 
 
 def get_amenities(amenities_section: Tag) -> List[str]:
@@ -90,36 +26,22 @@ def get_amenities(amenities_section: Tag) -> List[str]:
     for ul in amenities_section.find_all("li"):
         amenities.append(ul.get_text(strip=True))
 
-    return amenities
+    return json.dumps(amenities)
 
 
 def get_listings(scraper: Scraper, scraped_rows: List[Dict[str, str]]):
     """Gets each listing from a list of URLs"""
-    listings = []
-
     for row in scraped_rows:
 
-        listing_data = {
-            "title": None,
-            "monthly_rent": None,
-            "bedrooms": None,
-            "bathrooms": None,
-            "square_feet": None,
-            "about": None,
-            "description": None,
-            "amenities": None,
-            "fees": None,
-        }
-
         try:
-            res = scraper.fetch(row["url"])
-            soup: BeautifulSoup = BeautifulSoup(res.content, "html.parser")
+            res = scraper.headless_fetch(row["url"])
+            soup: BeautifulSoup = BeautifulSoup(res, "html.parser")
 
             if soup.find("h3", {"id": "notAvailableText"}):
                 logging.warning(f"Listing does not have availability. Skipping")
-                continue
+                row["available"] = False
 
-            listing_data["title"] = scraper.get_text_from_element(
+            row["building"] = scraper.get_text_from_element(
                 soup, "h1", class_name="propertyName"
             )
 
@@ -135,38 +57,40 @@ def get_listings(scraper: Scraper, scraped_rows: List[Dict[str, str]]):
                 detail = li.find("p", class_="rentInfoDetail").text.strip()
 
                 if label and detail:
-                    listing_data[label] = detail
+                    row[label] = detail
 
             about_text = scraper.get_text_from_element(
                 soup, "section", class_name="aboutSectionSnippet"
             )
 
-            listing_data["about"] = (
-                scraper.clean_whitespace(about_text) if about_text else None
-            )
+            row["about"] = scraper.clean_whitespace(about_text) if about_text else None
 
             description_text = scraper.get_text_from_element(
                 soup, "section", class_name="descriptionSection"
             )
 
-            listing_data["description"] = (
+            row["description"] = (
                 scraper.clean_whitespace(description_text) if description_text else None
             )
 
             amenities_section = soup.find("section", class_="amenitiesSection")
-            listing_data["amenities"] = get_amenities(amenities_section)
+            row["amenities"] = get_amenities(amenities_section)
 
             fees_text = scraper.get_text_from_element(
                 soup, "section", class_name="feesSection"
             )
 
-            listing_data["fees"] = (
-                scraper.clean_whitespace(fees_text) if fees_text else None
-            )
+            row["fees"] = scraper.clean_whitespace(fees_text) if fees_text else None
 
-            row.update(listing_data)
-            listings.append(row)
-            logging.info(f"Scraped application: {listing_data['title']}")
+            # Clean up square feet
+            row["square_feet"] = (
+                remove_letters(row["square_feet"]) if row["square_feet"] else None
+            )
+            row["bedrooms"] = remove_letters(row["bedrooms"])
+            row["bathrooms"] = remove_letters(row["bathrooms"])
+
+            row.update(row)
+            logging.info(f"Scraped application: {row['building']}")
             scraper.sleep(min=5, max=10)
 
         except Exception as err:
@@ -174,28 +98,36 @@ def get_listings(scraper: Scraper, scraped_rows: List[Dict[str, str]]):
                 f"Skipping. Error processing case data from {row['url']}: {err}"
             )
 
-    return listings
+    return scraped_rows
 
 
-def get_rows(
-    scraper: Scraper, url: str, json_data: Dict[str, Any], headers: Dict[str, Any]
-):
-    """Uses the apartments search API to fetch data for halifax"""
+def get_rows(scraper: Scraper, url: str):
+    """Extracts all the listings from the main page"""
     scraped_rows = []
 
     try:
-
-        res = scraper.fetch(url, method="POST", json_data=json_data, use_proxy=True)
-        res = res.json()
-        html = res["PlacardState"]["HTML"]
-
-        soup = BeautifulSoup(html, "html.parser")
+        res = scraper.headless_fetch(url)
+        soup = BeautifulSoup(res, "html.parser")
 
         # Each row represents a current application
         rows = soup.find_all("li", class_="mortar-wrapper")
 
         for row in rows:
-            row_data = {"id": None, "url": None, "address": None}
+            row_data = {
+                "id": None,
+                "available": True,
+                "url": None,
+                "address": None,
+                "building": None,
+                "monthly_rent": None,
+                "bedrooms": None,
+                "bathrooms": None,
+                "square_feet": None,
+                "about": None,
+                "description": None,
+                "amenities": None,
+                "fees": None,
+            }
 
             id = scraper.get_attribute_from_element(
                 row, "article", attribute="data-listingid", class_name="placard"
@@ -218,28 +150,29 @@ def get_rows(
             scraped_rows.append(row_data)
 
         # Check for more pages
-        state: Dict = res["MetaState"]
-        print(len(scraped_rows))
+        paging = soup.find("nav", {"id": "paging"})
+        li_elements = paging.find_all("li")
 
-        next_page = state.get("PageNextUrl", None)
-        if next_page:
-            logging.info("Another page found")
-            scraper.sleep(min=5, max=10)
+        for i, li in enumerate(li_elements):
+            if li.find("a", class_="active"):
 
-            # Then update the json payload
-            current_page = int(json_data["Paging"]["Page"])
+                # Check if there is another li element following the active one
+                if i + 1 < len(li_elements):
+                    logging.info("Another page found")
+                    scraper.sleep(min=10, max=20)
+                    url = scraper.get_attribute_from_element(
+                        li_elements[i + 1], "a", "href"
+                    )
+                    if not url:
+                        logging.info("No URL for next page found. Breaking")
+                        break
 
-            next_page = {"Page": str(current_page + 1)}
-            json_data["Paging"] = next_page
+                    next_page_rows = get_rows(scraper, url)
+                    scraped_rows.extend(next_page_rows)
+                    break
 
-            next_page_rows = get_rows(
-                scraper, url, json_data=json_data, headers=headers
-            )
-            scraped_rows.extend(next_page_rows)
-        else:
-            logging.info("No more pages found")
+        logging.info("No more pages found")
 
-        print(len(scraped_rows))
         return scraped_rows
 
     except Exception as e:
@@ -247,41 +180,23 @@ def get_rows(
         return None
 
 
-def get_x_csrf_token() -> str | None:
-    """Fetches the csrf token"""
+def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
+    try:
+        scraper = Scraper()
+        scraper.add_function(get_rows)
+        scraper.add_function(get_listings)
 
-    url = "https://www.apartments.com/halifax-ns/"
-    scraper = Scraper()
-    res = scraper.fetch(url)
-
-    text = res.text
-
-    # Simple regex to match the JavaScript object pattern
-    match = re.search(r"aft: \'(.*?)\'", text)
-
-    if match:
-        token = match.group(1)
-        return token
-
-
-def main():
-    url = "https://www.apartments.com/services/search/"
-    # token = get_x_csrf_token()
-
-    # if not token:
-    #     logging.error("Unable to get x-csrf-token")
-    #     return
-
-    # headers["x-csrf-token"] = token
-
-    scraper = Scraper()
-    scraper.add_function(get_rows)
-    # scraper.add_function(get_listings)
-
-    data = scraper.execute(url, json_data, headers)
-    print(data)
-    print(len(data))
+        data = scraper.execute(url)
+        return data
+    finally:
+        scraper.quit_web_driver()
 
 
 if __name__ == "__main__":
-    main()
+    url = "https://www.apartments.com/halifax-ns/"
+
+    data = scrape(url)
+    print(len(data))
+    for d in data:
+        print(d)
+        print("\n\n")
