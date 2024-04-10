@@ -1,10 +1,12 @@
+import json
 import logging
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
 from modules.scraper.scraper import Scraper
+from modules.utils import generate_hash
 
 
 # Set up logger
@@ -12,6 +14,37 @@ logger = logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)-8s %(levelname)-8s [%(funcName)s:%(lineno)d] %(message)s",
 )
+
+
+def get_building_name(building: str) -> str:
+    """Simple lookup table with the buildings owned by paramount who lists on 444rent"""
+    building = building.lower()
+    if building.find("5450 kaye"):
+        return "St Joseph's Square"
+    if building.find("5 horizon"):
+        return "Avonhurst Gardens"
+    elif building.find("1530 Birmingham"):
+        return "Vertu Suites"
+    elif building.find("5144 morris"):
+        return "Vic Suites"
+    elif building.find("1239 barrington"):
+        return "W Suites"
+    elif building.find("1078 tower"):
+        return "Tower Apartments"
+    elif building.find("31 russell lake"):
+        return "Lakecrest Estates"
+    elif building.find("5251 south"):
+        return "Hillside Suites"
+    elif building.find("19 irishtown"):
+        return "Losts at Greenvale"
+    elif building.find("1343 hollis"):
+        return "Waterford Suites"
+    elif building.find("1363 hollis"):
+        return "Flynn Flats"
+    elif building.find("6016 pepperell"):
+        return "The George"
+    else:
+        return building
 
 
 def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
@@ -29,6 +62,11 @@ def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
     try:
         # Find the main table, then immediate tr children
         table = tab.find("table")
+        # Some listings may not have table
+        if not table:
+            logging.info("No leasing table found")
+            return []
+
         rows: List[Tag] = table.find_all("tr", recursive=False)
 
         for row in rows:
@@ -55,10 +93,16 @@ def get_leasing_info(tab: Tag) -> Dict[str, Optional[List[str]]]:
                 # Assign the list of values to the category in the dictionary
                 leasing_info[category] = values
 
+        # Parse deposit if there is one:
+        if leasing_info["deposit"]:
+            leasing_info["deposit"] = float(
+                leasing_info["deposit"][0].replace("$", "").replace(",", "")
+            )
+
     except Exception as e:
         logging.error(f"Error getting leasing info: {e}")
     finally:
-        return leasing_info
+        return json.dumps(leasing_info)
 
 
 def get_building_info(tab: Tag) -> List[str | Dict[str, str]]:
@@ -68,21 +112,31 @@ def get_building_info(tab: Tag) -> List[str | Dict[str, str]]:
 
     try:
         table = tab.find("table")
+
+        # Some listings may not have table
+        if not table:
+            logging.info("No building table found")
+            return []
+
         main_row = table.find("tr")
-        columns = main_row.find_all("td", recursive=False)
+        columns: List[Tag] = main_row.find_all("td", recursive=False)
+
+        if not columns:
+            logging.info("No building info columns found")
+            return []
 
         paired_tables = []
         for column in columns:
-            tables = column.find_all("table")
+            tables_to_process = column.find_all("table")
 
-            for i in range(len(tables)):
-                current_table = tables[i]
+            for i in range(len(tables_to_process)):
+                current_table = tables_to_process[i]
 
                 # Check if the current table does not have the 'style' attribute
                 if not current_table.get("style"):
                     # Then check the next one
-                    if i + 1 < len(tables):
-                        next_table = tables[i + 1]
+                    if i + 1 < len(tables_to_process):
+                        next_table = tables_to_process[i + 1]
                         if next_table.get("style"):
                             # If the next one is a match, skip rest of iteration
                             paired_tables.append((current_table, next_table))
@@ -111,8 +165,8 @@ def get_building_info(tab: Tag) -> List[str | Dict[str, str]]:
     except Exception as e:
         logging.error(f"Error getting building info: {e}")
     finally:
-        return building_info
-
+        return json.dumps(building_info
+)
 
 def get_suite_info(tab: Tag) -> Dict[str, List[str]]:
     """Extracts all suite info from the suite tab"""
@@ -166,21 +220,23 @@ def get_suite_info(tab: Tag) -> Dict[str, List[str]]:
             ):
                 key = title_table.get_text(strip=True).lower()
                 suite_info[key] = [
-                    td.get_text(strip=True).replace("\xa0", " ") for td in detail_table.find_all("td")
+                    td.get_text(strip=True).replace("\xa0", " ")
+                    for td in detail_table.find_all("td")
                 ]
             elif title_table and not title_table.get("bgcolor"):
                 # If there's a title table without a detail table following, add contents to miscellaneous
-                suite_info["miscellaneous"].append(title_table.get_text(strip=True).replace("\xa0", " "))
+                suite_info["miscellaneous"].append(
+                    title_table.get_text(strip=True).replace("\xa0", " ")
+                )
 
     except Exception as e:
         logging.error(f"Error getting suite info: {e}")
     finally:
-        return suite_info
+        return json.dumps(suite_info)
 
 
 def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
     """Get the content from the leasing, description, building, and suite tabs on the page"""
-    tabs_data = {"leasing": None, "description": None, "building": None, "suite": None}
 
     for listing in listings:
         try:
@@ -189,11 +245,10 @@ def get_tab_content(scraper: Scraper, listings: List[Dict[str, Optional[str]]]):
             if not tabs:
                 continue
 
-            tabs_data["leasing"] = get_leasing_info(tabs[0])
-            tabs_data["description"] = tabs[1].get_text(strip=True)
-            tabs_data["building"] = get_building_info(tabs[2])
-            tabs_data["suite"] = get_suite_info(tabs[3])
-            listing.update(tabs_data)
+            listing["leasing_info"] = get_leasing_info(tabs[0])
+            listing["description_info"] = tabs[1].get_text(strip=True)
+            listing["building_info"] = get_building_info(tabs[2])
+            listing["suite_info"] = get_suite_info(tabs[3])
 
         except Exception as err:
             logging.error(f"Error processing tab content from {url}: {err}")
@@ -215,6 +270,10 @@ def get_listings(
             row["rooms"] = scraper.get_text_from_element(
                 soup, "div", attributes={"id": "suitemain"}
             )
+            row["address"] = scraper.get_text_from_element(
+                soup, "div", attributes={"id": "addressmain"}
+            )
+
             tab_container = soup.find("div", class_="tab_container")
             tabs = tab_container.find_all("div", class_="tab_content")
 
@@ -226,7 +285,6 @@ def get_listings(
 
         except Exception as err:
             logging.error(f"Error processing listing data from {row['url']}: {err}")
-            print(res.content)
         finally:
             scraper.sleep(min=1, max=2)
 
@@ -242,19 +300,18 @@ def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
 
         for row in rows:
             row_data = {
+                "id": None,
                 "url": None,
-                ######
-                "management": "Paramount Management",
-                "contact_info": None,
-                "rooms": None,
-                "tabs": None,
-                ######
+                "address": None,
                 "building": None,
                 "unit": None,
                 "location": None,
                 "square_feet": None,
                 "available_date": None,
                 "price": None,
+                "management": "Paramount Management",
+                "rooms": None,
+                "tabs": None,
             }
 
             href = scraper.get_attribute_from_element(row, "a", "href")
@@ -283,6 +340,20 @@ def get_rows(scraper: Scraper, tables: List[Tag]) -> List[Dict]:
                 row_data[field] = scraper.clean_whitespace(
                     columns[i].get_text(strip=True)
                 )
+
+            # Parse square feet and price
+            row_data["square_feet"] = float(
+                row_data["square_feet"].replace(",", "").replace(" ft2", "")
+            )
+            row_data["price"] = float(
+                row_data["price"].replace("$", "").replace(",", "")
+            )
+
+            # Update building name:
+            row_data["building"] = get_building_name(row_data["building"])
+
+            # Create an id using the building name and unit:
+            row_data["id"] = generate_hash(row_data["building"] + row_data["unit"])
 
             all_rows.append(row_data)
 
@@ -329,3 +400,4 @@ if __name__ == "__main__":
     for d in data:
         print(d)
         print("\n\n")
+
