@@ -115,3 +115,54 @@ class ScrapedFourFourFourRentListing(Base):
     description_info = Column(Text, nullable=True)
     building_info = Column(Text, nullable=True)
     suite_info = Column(Text, nullable=True)
+
+
+class ApartmentsDotComListing(Base):
+    __tablename__ = "apartments_dot_com_listings"
+    id = Column(String(7), primary_key=True)
+    available = Column(Boolean)
+    created_at = Column(DateTime, default=datetime.now)
+    # management = Column(String)
+    url = Column(String)
+    address = Column(String)
+    building = Column(String)
+    monthly_rent = Column(String, nullable=True)
+    bedrooms = Column(String, nullable=True)
+    bathrooms = Column(String, nullable=True)
+    square_feet = Column(String, nullable=True)
+    about = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    amenities = Column(Text, nullable=True)
+    fees = Column(Text, nullable=True)
+    history = relationship(
+        "ApartmentsDotComListingHistory", cascade="all, delete, delete-orphan"
+    )
+
+
+class ApartmentsDotComListingHistory(Base):
+    __tablename__ = "apartments_dot_com_listings_histories"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    listing_id = Column(String(7), ForeignKey("apartments_dot_com_listings.id"))
+    created_at = Column(DateTime, default=datetime.now)
+    changed = Column(String)
+    original = Column(Text)
+    updated = Column(Text)
+
+
+class ScrapedApartmentsDotComListing(Base):
+    __tablename__ = "scraped_apartments_dot_com_listings"
+    id = Column(String(7), primary_key=True)
+    available = Column(Boolean)
+    created_at = Column(DateTime, default=datetime.now)
+    # management = Column(String)
+    url = Column(String)
+    address = Column(String)
+    building = Column(String)
+    monthly_rent = Column(String, nullable=True)
+    bedrooms = Column(String, nullable=True)
+    bathrooms = Column(String, nullable=True)
+    square_feet = Column(String, nullable=True)
+    about = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
+    amenities = Column(Text, nullable=True)
+    fees = Column(Text, nullable=True)
