@@ -27,7 +27,7 @@ import {
 
 import { DataTablePagination } from "../data-table-components/pagination";
 import { DataTableToolbar } from "../data-table-components/toolbar";
-import { RowDialog } from "../data-table-components/row-dialog";
+import { RowDialog } from "./row-dialog";
 import { statuses } from "./statuses";
 
 interface FourFourFourRentDataTableProps<TData, TValue> {
@@ -144,13 +144,13 @@ export function FourFourFourRentDataTable<TData, TValue>({
               )}
             </TableBody>
           </Table>
-          {/* {selectedRowData && (
+          {selectedRowData && (
             <RowDialog
               isOpen={isDialogOpen}
               onClose={() => setIsDialogOpen(false)}
               row={selectedRowData}
             />
-          )} */}
+          )}
         </div>
       </div>
 

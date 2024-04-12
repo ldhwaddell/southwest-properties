@@ -12,8 +12,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 
-import type { applications } from "@prisma/client";
-import DOMPurify from "dompurify";
+import type { apartments_dot_com_listings } from "@prisma/client";
 
 import { formatSnakeCaseToTitle } from "@/utils";
 
@@ -29,7 +28,7 @@ export function RowDialog<TData>({
   row,
 }: RowDialogProps<TData>) {
   // Cast the object to an applications type
-  const rowData = row?.original as applications;
+  const rowData = row?.original as apartments_dot_com_listings;
 
   return (
     <Dialog
@@ -39,7 +38,7 @@ export function RowDialog<TData>({
       <DialogContent className="h-[90vh] sm:max-w-[800px]">
         <>
           <DialogHeader>
-            <DialogTitle>{rowData?.title}</DialogTitle>
+            <DialogTitle>{rowData?.building}</DialogTitle>
           </DialogHeader>
           <Separator />
 
@@ -50,14 +49,12 @@ export function RowDialog<TData>({
                   ? value.toString()
                   : "Does not exist";
 
-              const sanitizedContent = DOMPurify.sanitize(content);
-
               return (
                 <div key={key} className="mb-4 row-display-p">
                   <h3 className="text-lg font-semibold">
                     {formatSnakeCaseToTitle(key)}
                   </h3>
-                  <p dangerouslySetInnerHTML={{ __html: sanitizedContent }}></p>
+                  <p>{content}</p>
                   <Separator className="mt-1" />
                 </div>
               );
