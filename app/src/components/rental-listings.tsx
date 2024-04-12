@@ -14,7 +14,9 @@ import {
 import { Separator } from "./ui/separator";
 
 import { ApartmentsDataTable } from "./apartments-table/data-table";
+import { FourFourFourRentDataTable } from "./fourfourfourrent-table/fourfourfourrent-table";
 import { columns as apartmentsColumns } from "./apartments-table/columns";
+import { columns as fourFourFourRentColumns } from "./fourfourfourrent-table/columns";
 import type {
   apartments_dot_com_listings,
   fourfourfourrent_listings,
@@ -60,7 +62,12 @@ export function RentalListings({
       </div>
       <Separator />
 
-      {listingSource === "444rent" && <div>wooo</div>}
+      {listingSource === "444rent" && (
+        <FourFourFourRentDataTable
+          columns={fourFourFourRentColumns}
+          data={fourfourfourrent_listings}
+        />
+      )}
       {listingSource === "apartments" && (
         <ApartmentsDataTable
           columns={apartmentsColumns}
