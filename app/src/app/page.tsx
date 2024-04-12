@@ -27,9 +27,7 @@ import type {
 
 export const revalidate = 3600;
 
-
 export default async function Home() {
-
   // Get data for tables
   const applications: applications[] = await getApplications();
   const apartments_dot_com_listings: apartments_dot_com_listings[] =
@@ -68,10 +66,13 @@ export default async function Home() {
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="space-y-1">
-                <RentalListings />{" "}
+                <RentalListings
+                  apartments_dot_com_listings={apartments_dot_com_listings}
+                  fourfourfourrent_listings={fourfourfourrent_listings}
+                />
               </div>
             </CardContent>
-            <CardFooter></CardFooter>{" "}
+            <CardFooter></CardFooter>
           </Card>
         </TabsContent>
       </Tabs>

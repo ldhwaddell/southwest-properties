@@ -1,7 +1,7 @@
 "use client";
 
 import { Checkbox } from "../ui/checkbox";
-import { DataTableColumnHeader } from "../data-table-column-header";
+import { DataTableColumnHeader } from "../data-table-components/column-header";
 import { ColumnDef } from "@tanstack/react-table";
 import type { applications } from "@prisma/client";
 import { cn } from "@/lib/utils";

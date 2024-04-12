@@ -25,9 +25,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { DataTablePagination } from "../data-table-pagination";
-import { DataTableToolbar } from "../data-table-toolbar";
-import { RowDialog } from "../data-table-row-display";
+import { DataTablePagination } from "../data-table-components/pagination";
+import { DataTableToolbar } from "../data-table-components/toolbar";
+import { RowDialog } from "../data-table-components/row-dialog";
+import { statuses } from "./statuses";
 
 interface ApplicationsDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -82,7 +83,11 @@ export function ApplicationsDataTable<TData, TValue>({
 
   return (
     <>
-      <DataTableToolbar table={table} />
+      <DataTableToolbar
+        table={table}
+        statuses={statuses}
+        defaultExportFileName="applications"
+      />
       <div className="rounded-md border">
         {/* Modify h-full to make table take up entire screen but not more */}
         <div className="h-[55vh] relative overflow-auto">
