@@ -6,19 +6,36 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+
 import { columns } from "@/components/applications-table/columns";
 import { ApplicationsDataTable } from "@/components/applications-table/data-table";
+import { RentalListings } from "@/components/rental-listings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { getApplications } from "@/db/utils";
-import type { applications } from "@prisma/client";
+import {
+  getApplications,
+  getApartmentsDotComListings,
+  get444RentListings,
+} from "@/db/utils";
+
+import type {
+  applications,
+  apartments_dot_com_listings,
+  fourfourfourrent_listings,
+} from "@prisma/client";
 
 export const revalidate = 3600;
 
+
 export default async function Home() {
+
+  // Get data for tables
   const applications: applications[] = await getApplications();
+  const apartments_dot_com_listings: apartments_dot_com_listings[] =
+    await getApartmentsDotComListings();
+  const fourfourfourrent_listings: fourfourfourrent_listings[] =
+    await get444RentListings();
 
   return (
     <div className="p-2.5 m-2.5 min-h-screen">
@@ -31,9 +48,9 @@ export default async function Home() {
         <TabsContent value="applications">
           <Card>
             <CardHeader>
-              <CardTitle>Account</CardTitle>
               <CardDescription>
-                This shows all applications that have been found since the{" "}
+                This shows all applications that have been found since
+                collections began.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -44,14 +61,17 @@ export default async function Home() {
         <TabsContent value="rentals">
           <Card>
             <CardHeader>
-              <CardTitle>Account</CardTitle>
+              <CardDescription>
+                This shows all rentals currently listed on the currently
+                targeted posting websites.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="space-y-1">ociencioen</div>
+              <div className="space-y-1">
+                <RentalListings />{" "}
+              </div>
             </CardContent>
-            <CardFooter>
-              <Button>Save changes</Button>
-            </CardFooter>{" "}
+            <CardFooter></CardFooter>{" "}
           </Card>
         </TabsContent>
       </Tabs>
