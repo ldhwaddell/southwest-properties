@@ -65,12 +65,10 @@ export default async function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="space-y-1">
                 <RentalListings
                   apartments_dot_com_listings={apartments_dot_com_listings}
                   fourfourfourrent_listings={fourfourfourrent_listings}
                 />
-              </div>
             </CardContent>
             <CardFooter></CardFooter>
           </Card>
