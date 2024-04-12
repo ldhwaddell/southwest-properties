@@ -13,7 +13,7 @@ logger = logging.basicConfig(
 )
 
 
-def remove_letters(str: str) -> int:
+def remove_letters(str: str) -> str:
     return "".join(i for i in str if i.isdigit())
 
 
@@ -57,7 +57,7 @@ def get_listings(scraper: Scraper, scraped_rows: List[Dict[str, str]]):
                 detail = li.find("p", class_="rentInfoDetail").text.strip()
 
                 if label and detail:
-                    row[label] = detail
+                    row[label] = str(detail)
 
             about_text = scraper.get_text_from_element(
                 soup, "section", class_name="aboutSectionSnippet"
@@ -83,15 +83,13 @@ def get_listings(scraper: Scraper, scraped_rows: List[Dict[str, str]]):
             row["fees"] = scraper.clean_whitespace(fees_text) if fees_text else None
 
             # Clean up square feet
-            row["square_feet"] = (
-                remove_letters(row["square_feet"]) if row["square_feet"] else None
-            )
-            row["bedrooms"] = remove_letters(row["bedrooms"])
-            row["bathrooms"] = remove_letters(row["bathrooms"])
+            row["square_feet"] = str(row["square_feet"]) if row["square_feet"] else None
+            row["bedrooms"] = str(row["bedrooms"]) if row["bedrooms"] else None
+            row["bathrooms"] = str(row["bathrooms"]) if row["bathrooms"] else None
 
             row.update(row)
             logging.info(f"Scraped application: {row['building']}")
-            scraper.sleep(min=5, max=10)
+            scraper.sleep()
 
         except Exception as err:
             logging.error(
@@ -111,6 +109,10 @@ def get_rows(scraper: Scraper, url: str):
 
         # Each row represents a current application
         rows = soup.find_all("li", class_="mortar-wrapper")
+
+        if not rows:
+            logging.error("Unable to find listings")
+            return None
 
         for row in rows:
             row_data = {
@@ -159,7 +161,7 @@ def get_rows(scraper: Scraper, url: str):
                 # Check if there is another li element following the active one
                 if i + 1 < len(li_elements):
                     logging.info("Another page found")
-                    scraper.sleep(min=10, max=20)
+                    scraper.sleep()
                     url = scraper.get_attribute_from_element(
                         li_elements[i + 1], "a", "href"
                     )
@@ -195,8 +197,3 @@ def scrape(url: str) -> Optional[List[Dict[str, Optional[str]]]]:
 if __name__ == "__main__":
     url = "https://www.apartments.com/halifax-ns/"
 
-    data = scrape(url)
-    print(len(data))
-    for d in data:
-        print(d)
-        print("\n\n")
