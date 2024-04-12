@@ -27,7 +27,7 @@ import {
 
 import { DataTablePagination } from "../data-table-components/pagination";
 import { DataTableToolbar } from "../data-table-components/toolbar";
-import { RowDialog } from "../data-table-components/row-dialog";
+import { RowDialog } from "./row-dialog";
 import { statuses } from "./statuses";
 
 interface ApplicationsDataTableProps<TData, TValue> {
