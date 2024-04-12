@@ -87,6 +87,10 @@ export function ApplicationsDataTable<TData, TValue>({
         table={table}
         statuses={statuses}
         defaultExportFileName="applications"
+        filterInputPlaceholder="Filter Applications..."
+        filterColumn="title"
+        facetedFilterColumm="active"
+        facetedFilterTitle="Active"
       />
       <div className="rounded-md border">
         {/* Modify h-full to make table take up entire screen but not more */}
