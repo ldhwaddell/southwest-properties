@@ -3,6 +3,7 @@ import React, { useState } from "react";
 
 import {
   ColumnDef,
+  SortingState,
   ColumnFiltersState,
   flexRender,
   getCoreRowModel,
@@ -10,6 +11,7 @@ import {
   getFacetedUniqueValues,
   getFilteredRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
   useReactTable,
   Row,
 } from "@tanstack/react-table";
@@ -50,6 +52,9 @@ export function ApplicationsDataTable<TData, TValue>({
     pageSize: 20,
   });
 
+  // Allow sorting
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   // Event handler for opening the dialog with the clicked row's data
   const handleRowClick = (row: Row<TData>) => {
     setSelectedRowData(row);
@@ -66,9 +71,12 @@ export function ApplicationsDataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedRowModel: getFacetedRowModel(),
     onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     state: {
       columnFilters,
       pagination,
+      sorting,
     },
   });
 

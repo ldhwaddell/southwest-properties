@@ -1,6 +1,7 @@
 "use client";
 
 import { Checkbox } from "../ui/checkbox";
+import { DataTableColumnHeader } from "../data-table-column-header";
 import { ColumnDef } from "@tanstack/react-table";
 import type { applications } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,11 @@ function truncateText<T>(
       ? `${text.substring(0, maxLength)}...`
       : text;
 
-  return <div className="w-full md:w-80 break-words">{text ? truncatedText : noValueMessage}</div>;
+  return (
+    <div className="w-full md:w-80 break-words">
+      {text ? truncatedText : noValueMessage}
+    </div>
+  );
 }
 
 export const columns: ColumnDef<applications>[] = [
@@ -65,10 +70,13 @@ export const columns: ColumnDef<applications>[] = [
 
       return (
         <div
-          className={cn("rounded-full px-2 text-white", {
-            "bg-green-500": isActive,
-            "bg-red-500": !isActive,
-          })}
+          className={cn(
+            "inline-flex justify-center items-center rounded-full px-2 text-white",
+            {
+              "bg-green-500": isActive,
+              "bg-red-500": !isActive,
+            }
+          )}
         >
           {" "}
           {isActive ? "True" : "False"}
@@ -95,6 +103,9 @@ export const columns: ColumnDef<applications>[] = [
           rel="noopener noreferrer"
           className="text-blue-600 hover:text-blue-800"
           title={url}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
         >
           Link
         </a>
@@ -105,7 +116,10 @@ export const columns: ColumnDef<applications>[] = [
   },
   {
     accessorKey: "last_updated",
-    header: "Last Updated",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Last Updated" />
+    ),
+    sortingFn: "datetime",
     cell: ({ row }) => {
       const lastUpdated: Date = row.getValue("last_updated");
 
@@ -131,54 +145,8 @@ export const columns: ColumnDef<applications>[] = [
       truncateText(row, (row) => row.getValue("summary"), 100, "No Summary"),
   },
   {
-    accessorKey: "proposal",
-    header: "Proposal",
-    cell: ({ row }) =>
-      truncateText(row, (row) => row.getValue("proposal"), 100, "No Proposal"),
-  },
-  {
-    accessorKey: "update_notice",
-    header: "Update Notice",
-    cell: ({ row }) =>
-      truncateText(
-        row,
-        (row) => row.getValue("update_notice"),
-        100,
-        "No Update Notice"
-      ),
-  },
-  {
-    accessorKey: "request",
-    header: "Request",
-    cell: ({ row }) =>
-      truncateText(row, (row) => row.getValue("request"), 100, "No Request"),
-  },
-  {
-    accessorKey: "process",
-    header: "Process",
-    cell: ({ row }) =>
-      truncateText(row, (row) => row.getValue("process"), 100, "No Process"),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) =>
-      truncateText(row, (row) => row.getValue("status"), 100, "No Status"),
-  },
-  {
-    accessorKey: "documents_submitted_for_evaluation",
-    header: "Documents",
-    cell: ({ row }) =>
-      truncateText(
-        row,
-        (row) => row.getValue("documents_submitted_for_evaluation"),
-        100,
-        "No Documents"
-      ),
-  },
-  {
     accessorKey: "contact_info",
-    header: "Contact",
+    header: "Contact Info",
     cell: ({ row }) => {
       const contactInfoStr: string = row.getValue("contact_info");
 
