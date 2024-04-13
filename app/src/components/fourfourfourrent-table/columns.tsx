@@ -6,6 +6,27 @@ import { ColumnDef } from "@tanstack/react-table";
 import type { fourfourfourrent_listings } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
+type GetValueFunction<T> = (row: T) => string | null | undefined;
+
+function truncateText<T>(
+  row: T,
+  getValue: GetValueFunction<T>,
+  maxLength: number,
+  noValueMessage: string
+): JSX.Element {
+  const text = getValue(row);
+  const truncatedText =
+    text && text.length > maxLength
+      ? `${text.substring(0, maxLength)}...`
+      : text;
+
+  return (
+    <div className={`w-full md:w-80 break-words`}>
+      {text ? truncatedText : noValueMessage}
+    </div>
+  );
+}
+
 export const columns: ColumnDef<fourfourfourrent_listings>[] = [
   {
     accessorKey: "id",
@@ -33,7 +54,25 @@ export const columns: ColumnDef<fourfourfourrent_listings>[] = [
     },
     enableHiding: false,
   },
-  { accessorKey: "building", header: "Building", enableHiding: false },
+  {
+    accessorKey: "building",
+    header: "Building",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("building");
+
+      return <div className="w-40">{rowData || "No Building"}</div>;
+    },
+    enableHiding: false,
+  },
+  {
+    accessorKey: "unit",
+    header: "Unit",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("unit");
+
+      return <div className="w-20">{rowData || "No Unit"}</div>;
+    },
+  },
   {
     accessorKey: "available",
     header: "Available",
@@ -84,18 +123,98 @@ export const columns: ColumnDef<fourfourfourrent_listings>[] = [
       );
     },
   },
-  { accessorKey: "address", header: "Address" },
+  {
+    accessorKey: "address",
+    header: "Address",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("address");
+
+      return <div className="w-44">{rowData || "No Address"}</div>;
+    },
+  },
+  { accessorKey: "management", header: "Management" },
+  {
+    accessorKey: "available_date",
+    header: "Available Date",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("available_date");
+
+      return <div className="w-24">{rowData || "No Available Date"}</div>;
+    },
+  },
   {
     accessorKey: "price",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Monthly Rent" />
     ),
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("price");
+
+      return <div className="w-20">{rowData || "No Monthly Rent"}</div>;
+    },
   },
-  { accessorKey: "rooms", header: "Rooms" },
+  {
+    accessorKey: "rooms",
+    header: "Rooms",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("rooms");
+
+      return <div className="w-32">{rowData || "No Rooms"}</div>;
+    },
+  },
   {
     accessorKey: "square_feet",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Square Feet" />
     ),
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("square_feet");
+
+      return <div className="w-28">{rowData || "No Square Feet"}</div>;
+    },
+  },
+  {
+    accessorKey: "leasing_info",
+    header: "Leasing Info",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("leasing_info"),
+        100,
+        "No Leasing Info"
+      ),
+  },
+  {
+    accessorKey: "description_info",
+    header: "Description Info",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("description_info"),
+        100,
+        "No Description"
+      ),
+  },
+  {
+    accessorKey: "building_info",
+    header: "Building Info",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("building_info"),
+        100,
+        "No Building Info"
+      ),
+  },
+  {
+    accessorKey: "suite_info",
+    header: "Suite Info",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("suite_info"),
+        100,
+        "No Suite Info"
+      ),
   },
 ];

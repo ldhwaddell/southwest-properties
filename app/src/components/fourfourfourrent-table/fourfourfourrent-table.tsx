@@ -14,6 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
   Row,
+  VisibilityState
 } from "@tanstack/react-table";
 
 import {
@@ -53,6 +54,15 @@ export function FourFourFourRentDataTable<TData, TValue>({
     pageSize: 20,
   });
 
+  //Rows to hide by default
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({
+      leasing_info: false,
+      description_info: false,
+      building_info: false,
+      suite_info: false,
+    });
+
   // Allow sorting
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -74,8 +84,10 @@ export function FourFourFourRentDataTable<TData, TValue>({
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       columnFilters,
+      columnVisibility,
       pagination,
       sorting,
     },
@@ -86,7 +98,7 @@ export function FourFourFourRentDataTable<TData, TValue>({
       <DataTableToolbar
         table={table}
         statuses={statuses}
-        defaultExportFileName="apartments"
+        defaultExportFileName="444rent"
         filterInputPlaceholder="Filter Buildings..."
         filterColumn="building"
         facetedFilterColumm="available"
