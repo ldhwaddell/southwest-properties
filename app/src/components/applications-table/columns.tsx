@@ -46,6 +46,9 @@ export const columns: ColumnDef<applications>[] = [
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
         />
       );
     },
