@@ -91,7 +91,9 @@ export function ExportExcel<TData>({
           variant="outline"
           size="sm"
           className="h-8 lg:flex ml-2"
-          disabled={!table.getIsSomeRowsSelected()}
+          disabled={
+            !(table.getIsSomeRowsSelected() || table.getIsAllRowsSelected())
+          }
         >
           <File className="h-3.5 w-3.5" />
           <span className="sr-only sm:not-sr-only">Export</span>
