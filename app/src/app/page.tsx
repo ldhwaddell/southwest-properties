@@ -27,7 +27,7 @@ import type {
 
 export const revalidate = 3600;
 
-export default async function Home() {
+export default async function Page() {
   // Get data for tables
   const applications: applications[] = await getApplications();
   const apartments_dot_com_listings: apartments_dot_com_listings[] =
@@ -48,7 +48,7 @@ export default async function Home() {
             <CardHeader>
               <CardDescription>
                 This shows all applications that have been found since
-                collections began.
+                collections began. Click a row to see more detailed information. 
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -61,7 +61,7 @@ export default async function Home() {
             <CardHeader>
               <CardDescription>
                 This shows all rentals currently listed on the currently
-                targeted posting websites.
+                targeted posting websites. Click a row to see more detailed information. 
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
