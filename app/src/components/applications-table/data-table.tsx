@@ -14,6 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
   Row,
+  VisibilityState,
 } from "@tanstack/react-table";
 
 import {
@@ -53,6 +54,16 @@ export function ApplicationsDataTable<TData, TValue>({
     pageSize: 20,
   });
 
+  //Rows to hide by default
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({
+      update_notice: false,
+      request: false,
+      proposal: false,
+      process: false,
+      documents_submitted_for_evaluation: false
+    });
+
   // Allow sorting
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -74,8 +85,10 @@ export function ApplicationsDataTable<TData, TValue>({
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       columnFilters,
+      columnVisibility,
       pagination,
       sorting,
     },

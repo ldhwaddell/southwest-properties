@@ -148,6 +148,46 @@ export const columns: ColumnDef<applications>[] = [
       truncateText(row, (row) => row.getValue("summary"), 100, "No Summary"),
   },
   {
+    accessorKey: "update_notice",
+    header: "Update Notice",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("update_notice"),
+        100,
+        "No Update Notice"
+      ),
+  },
+  {
+    accessorKey: "request",
+    header: "Request",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("request"), 100, "No Request"),
+  },
+  {
+    accessorKey: "proposal",
+    header: "Proposal",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("proposal"), 100, "No Proposal"),
+  },
+  {
+    accessorKey: "process",
+    header: "Process",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("process"), 100, "No Process"),
+  },
+  {
+    accessorKey: "documents_submitted_for_evaluation",
+    header: "Documents",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("documents_submitted_for_evaluation"),
+        100,
+        "No documents"
+      ),
+  },
+  {
     accessorKey: "contact_info",
     header: "Contact Info",
     cell: ({ row }) => {
