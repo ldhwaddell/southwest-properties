@@ -24,6 +24,9 @@ export const columns: ColumnDef<apartments_dot_com_listings>[] = [
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
         />
       );
     },
