@@ -14,6 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
   Row,
+  VisibilityState,
 } from "@tanstack/react-table";
 
 import {
@@ -53,6 +54,15 @@ export function ApartmentsDataTable<TData, TValue>({
     pageSize: 20,
   });
 
+  //Rows to hide by default
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({
+      about: false,
+      description: false,
+      amenities: false,
+      fees: false
+    });
+
   // Allow sorting
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -74,8 +84,10 @@ export function ApartmentsDataTable<TData, TValue>({
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       columnFilters,
+      columnVisibility,
       pagination,
       sorting,
     },

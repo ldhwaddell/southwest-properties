@@ -5,6 +5,27 @@ import { ColumnDef } from "@tanstack/react-table";
 import type { apartments_dot_com_listings } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
+type GetValueFunction<T> = (row: T) => string | null | undefined;
+
+function truncateText<T>(
+  row: T,
+  getValue: GetValueFunction<T>,
+  maxLength: number,
+  noValueMessage: string
+): JSX.Element {
+  const text = getValue(row);
+  const truncatedText =
+    text && text.length > maxLength
+      ? `${text.substring(0, maxLength)}...`
+      : text;
+
+  return (
+    <div className={`w-full md:w-80 break-words`}>
+      {text ? truncatedText : noValueMessage}
+    </div>
+  );
+}
+
 export const columns: ColumnDef<apartments_dot_com_listings>[] = [
   {
     accessorKey: "id",
@@ -32,7 +53,16 @@ export const columns: ColumnDef<apartments_dot_com_listings>[] = [
     },
     enableHiding: false,
   },
-  { accessorKey: "building", header: "Building", enableHiding: false },
+  {
+    accessorKey: "building",
+    header: "Building",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("building");
+
+      return <div className="w-40">{rowData || "No Building"}</div>;
+    },
+    enableHiding: false,
+  },
   {
     accessorKey: "available",
     header: "Available",
@@ -83,9 +113,73 @@ export const columns: ColumnDef<apartments_dot_com_listings>[] = [
       );
     },
   },
-  { accessorKey: "address", header: "Address" },
-  { accessorKey: "monthly_rent", header: "Monthly Rent" },
-  { accessorKey: "bedrooms", header: "Bedrooms" },
-  { accessorKey: "bathrooms", header: "Bathrooms" },
-  { accessorKey: "square_feet", header: "Square Feet" },
+  {
+    accessorKey: "address",
+    header: "Address",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("address");
+
+      return <div className="w-40">{rowData || "No Address"}</div>;
+    },
+  },
+  {
+    accessorKey: "monthly_rent",
+    header: "Monthly Rent",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("monthly_rent");
+
+      return <div className="w-24">{rowData || "No Monthly Rent"}</div>;
+    },
+  },
+  {
+    accessorKey: "bedrooms",
+    header: "Bedrooms",
+  },
+  {
+    accessorKey: "bathrooms",
+    header: "Bathrooms",
+  },
+  {
+    accessorKey: "square_feet",
+    header: "Square Feet",
+    cell: ({ row }) => {
+      const rowData: string = row.getValue("square_feet");
+
+      return <div className="w-28">{rowData || "No Square Feet"}</div>;
+    },
+  },
+  {
+    accessorKey: "about",
+    header: "About",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("about"), 100, "No About"),
+  },
+  {
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("description"),
+        100,
+        "No Description"
+      ),
+  },
+  {
+    accessorKey: "amenities",
+    header: "Amenities",
+    cell: ({ row }) =>
+      truncateText(
+        row,
+        (row) => row.getValue("amenities"),
+        100,
+        "No Amenities"
+      ),
+  },
+  {
+    accessorKey: "fees",
+    header: "Fees",
+    cell: ({ row }) =>
+      truncateText(row, (row) => row.getValue("fees"), 100, "No Fees"),
+  },
 ];
