@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS scraped_applications (
 /* The table that holds changes make to applications in the main appliscations table */
 CREATE TABLE IF NOT EXISTS application_histories (
     id SERIAL PRIMARY KEY,
-    application_id VARCHAR(64) NOT NULL,
+    existing_record_id VARCHAR(64) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     changed VARCHAR,
     original TEXT,
     updated TEXT,
-    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
+    FOREIGN KEY (existing_record_id) REFERENCES applications(id) ON DELETE CASCADE
 );

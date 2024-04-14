@@ -37,10 +37,10 @@ CREATE TABLE IF NOT EXISTS scraped_apartments_dot_com_listings (
 /* The table that holds changes make to listings in the main listings table */
 CREATE TABLE IF NOT EXISTS apartments_dot_com_listings_histories (
     id SERIAL PRIMARY KEY,
-    listing_id VARCHAR(7) NOT NULL,
+    existing_record_id VARCHAR(7) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     changed VARCHAR,
     original TEXT,
     updated TEXT,
-    FOREIGN KEY (listing_id) REFERENCES apartments_dot_com_listings(id) ON DELETE CASCADE
+    FOREIGN KEY (existing_record_id) REFERENCES apartments_dot_com_listings(id) ON DELETE CASCADE
 );

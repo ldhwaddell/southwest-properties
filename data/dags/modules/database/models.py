@@ -37,7 +37,7 @@ class Application(Base):
 class ApplicationHistory(Base):
     __tablename__ = "application_histories"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    application_id = Column(String(64), ForeignKey("applications.id"))
+    existing_record_id = Column(String(64), ForeignKey("applications.id"))
     created_at = Column(DateTime, default=datetime.now)
     changed = Column(String)
     original = Column(Text)
@@ -89,7 +89,7 @@ class FourFourFourRentListing(Base):
 class FourFourFourRentListingHistory(Base):
     __tablename__ = "fourfourfourrent_listings_histories"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    listing_id = Column(String(64), ForeignKey("fourfourfourrent_listings.id"))
+    existing_record_id = Column(String(64), ForeignKey("fourfourfourrent_listings.id"))
     created_at = Column(DateTime, default=datetime.now)
     changed = Column(String)
     original = Column(Text)
@@ -142,7 +142,7 @@ class ApartmentsDotComListing(Base):
 class ApartmentsDotComListingHistory(Base):
     __tablename__ = "apartments_dot_com_listings_histories"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    listing_id = Column(String(7), ForeignKey("apartments_dot_com_listings.id"))
+    existing_record_id = Column(String(7), ForeignKey("apartments_dot_com_listings.id"))
     created_at = Column(DateTime, default=datetime.now)
     changed = Column(String)
     original = Column(Text)

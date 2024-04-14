@@ -43,10 +43,10 @@ CREATE TABLE IF NOT EXISTS scraped_fourfourfourrent_listings (
 /* The table that holds changes make to listings in the main listings table */
 CREATE TABLE IF NOT EXISTS fourfourfourrent_listings_histories (
     id SERIAL PRIMARY KEY,
-    listing_id VARCHAR(64) NOT NULL,
+    existing_record_id VARCHAR(64) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     changed VARCHAR,
     original TEXT,
     updated TEXT,
-    FOREIGN KEY (listing_id) REFERENCES fourfourfourrent_listings(id) ON DELETE CASCADE
+    FOREIGN KEY (existing_record_id) REFERENCES fourfourfourrent_listings(id) ON DELETE CASCADE
 );

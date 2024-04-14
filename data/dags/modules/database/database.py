@@ -123,7 +123,7 @@ class Database:
                 ):
 
                     change_record = {
-                        "application_id": existing_record.id,
+                        "existing_record_id": existing_record.id,
                         "changed": key,
                         "original": str(getattr(existing_record, key)),
                         "updated": str(value),
