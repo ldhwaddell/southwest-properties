@@ -57,7 +57,7 @@ class Scraper:
         options.add_argument("--no-sandbox")
         logging.info("Successfully built webdriver")
 
-        command_executor = "http://remote_chromedriver:4444/wd/hub"
+        command_executor = "http://remote-chromedriver:4444/wd/hub"
         self.driver = webdriver.Remote(command_executor, options=options)
 
     def quit_web_driver(self):

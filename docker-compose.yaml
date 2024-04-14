@@ -85,12 +85,13 @@ x-airflow-common: &airflow-common
 
 services:
   selenium:
-    container_name: remote_chromedriver
+    container_name: remote-chromedriver
     image: selenium/standalone-chrome:123.0
-    restart: always
     shm_size: 2gb
+    restart: always
     ports:
       - "4444:4444"
+
 
   postgres:
     image: postgres:13
@@ -167,6 +168,7 @@ services:
       start_period: 30s
     environment:
       <<: *airflow-common-env
+      RDS_POSTGRES_CONN: ${RDS_POSTGRES_CONN}
       # Required to handle warm shutdown of the celery workers properly
       # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
       DUMB_INIT_SETSID: "0"
