@@ -16,7 +16,7 @@ logger = logging.basicConfig(
 
 class Database:
     def __init__(self):
-        db_url = os.environ.get("AIRFLOW__DATABASE__SQL_ALCHEMY_CONN")
+        db_url = os.environ.get("RDS_POSTGRES_CONN")
         self.engine = create_engine(db_url)
         self.session_maker = sessionmaker(bind=self.engine)
         self.session: Session = self.session_maker()
