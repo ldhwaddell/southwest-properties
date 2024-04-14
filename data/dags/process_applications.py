@@ -30,7 +30,7 @@ with DAG(
 
     create_applications_tables = SQLExecuteQueryOperator(
         task_id="create_applications_tables",
-        conn_id="pg_conn",
+        conn_id="aws_postgres",
         sql="sql/applications_tables_schemas.sql",
     )
     create_applications_tables.doc_md = "Creates the necessary 'applications', 'scraped_applications', and 'applications_histories' tables if they do not exist"
@@ -60,7 +60,7 @@ with DAG(
 
     drop_scraped_applications_table = SQLExecuteQueryOperator(
         task_id="drop_scraped_applications_table",
-        conn_id="pg_conn",
+        conn_id="aws_postgres",
         sql="DROP TABLE scraped_applications;",
     )
     drop_scraped_applications_table.doc_md = "Drops the scraped_applications table."

@@ -34,7 +34,7 @@ with DAG(
 
     create_listings_tables = SQLExecuteQueryOperator(
         task_id="create_listings_tables",
-        conn_id="pg_conn",
+        conn_id="aws_postgres",
         sql="sql/apartments_dot_com_tables_schemas.sql",
     )
     create_listings_tables.doc_md = "Creates the necessary 'apartments_dot_com_listings', 'scraped_apartments_dot_com_listings', and 'apartments_dot_com_listings_histories' tables if they do not exist"
@@ -66,7 +66,7 @@ with DAG(
 
     drop_scraped_applications_table = SQLExecuteQueryOperator(
         task_id="drop_scraped_apartments_dot_com_listings_table",
-        conn_id="pg_conn",
+        conn_id="aws_postgres",
         sql="DROP TABLE scraped_apartments_dot_com_listings;",
     )
     drop_scraped_applications_table.doc_md = (

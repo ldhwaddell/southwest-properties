@@ -34,7 +34,7 @@ with DAG(
 
     create_listings_tables = SQLExecuteQueryOperator(
         task_id="create_listings_tables",
-        conn_id="pg_conn",
+        conn_id="aws_postgres",
         sql="sql/fourfourfourrent_tables_schemas.sql",
     )
     create_listings_tables.doc_md = "Creates the necessary 'fourfourfourrent_listings', 'scraped_fourfourfourrent_listings', and 'fourfourfourrent_listings_histories' tables if they do not exist"
@@ -66,7 +66,7 @@ with DAG(
 
     drop_scraped_applications_table = SQLExecuteQueryOperator(
         task_id="drop_scraped_fourfourfourrent_listings_table",
-        conn_id="pg_conn",
+        conn_id="aws_postgres",
         sql="DROP TABLE scraped_fourfourfourrent_listings;",
     )
     drop_scraped_applications_table.doc_md = (
