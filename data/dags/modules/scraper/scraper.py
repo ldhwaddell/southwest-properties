@@ -198,7 +198,8 @@ class Scraper:
 
     def clean_whitespace(self, text: str) -> str:
         """Replace one or more whitespace characters (including non-breaking spaces) with a single space"""
-        return re.sub(r"\s+", " ", text)
+        if text is not None:
+            return re.sub(r"\s+", " ", text)
 
     def parse_iso8601_date(self, date_str: str) -> datetime:
         """Parse an ISO 8601 formatted date string to a datetime object."""
