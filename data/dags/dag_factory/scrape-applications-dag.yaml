@@ -2,30 +2,50 @@
 default:
   default_args:
     owner: "airflow"
-    start_date: 2018-03-01
-    end_date: 2018-03-05
-    retries: 1
+    start_date: 2024-01-01
+    retries: 5
     retry_delay_sec: 300
+  catchup: false
   concurrency: 1
   max_active_runs: 1
-  dagrun_timeout_sec: 600
+  dagrun_timeout_sec: 900
   default_view: "tree"
   orientation: "LR"
-  schedule_interval: "0 1 * * *"
+  schedule_interval: "@daily"
 
 scrape_applications:
-  default_args:
-    owner: "airflow"
-    start_date: 2 days
-  description: "this is an example dag"
-  schedule_interval: "0 3 * * *"
+  description: "DAG to scrape applications data and process it"
   render_template_as_native_obj: True
   tasks:
-    task_1:
-      operator: airflow.operators.bash_operator.BashOperator
-      bash_command: "echo 1"
-    task_2:
-      operator: airflow.operators.bash_operator.BashOperator
-      bash_command: "echo 2"
-      dependencies: [task_1]
+    build_tables:
+      operator: airflow.providers.common.sql.operators.sql.SQLExecuteQueryOperator
+      conn_id: "pg_conn"
+      sql: sql/scraped_applications_schema.sql
 
+    get_applications_urls:
+      operator: airflow.operators.python_operator.PythonOperator
+      python_callable_name: get_application_urls
+      python_callable_file: /opt/airflow/dags/modules/applications_tracking/test.py
+      dependencies: [build_tables]
+
+    get_applications:
+      operator: airflow.operators.python_operator.PythonOperator
+      python_callable_name: get_applications
+      python_callable_file: /opt/airflow/dags/modules/applications_tracking/test.py
+      dependencies: [get_applications_urls]
+
+    save_raw_data:
+      operator: operators.RedisToPostgres.RedisToPostgresOperator
+      redis_conn_id: "redis_conn"
+      pg_conn_id: "pg_conn"
+      redis_key: "scraped_applications"
+      table_name: "scraped_applications"
+      dependencies: [get_applications]
+
+    transform:
+      operator: operators.Transform.TransformOperator
+      raw_data_table: "scraped_applications"
+      transform_fn_name: "transform"
+      transform_fn_file: "modules.applications_tracking.transform"
+      pg_conn_id: "pg_conn"
+      dependencies: [save_raw_data]
