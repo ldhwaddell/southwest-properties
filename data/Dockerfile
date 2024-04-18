@@ -6,6 +6,3 @@ COPY requirements.txt /requirements.txt
 
 # Install additional requirements from your requirements.txt file
 RUN pip install --no-cache-dir -r /requirements.txt
-
-USER root
-RUN apt-get update && apt-get install -y vim
