@@ -21,3 +21,4 @@ urllib3==2.2.1
 wsproto==1.2.0
 dag-factory===0.19.0
 redis===5.0.3
+apache-airflow-providers-redis===3.6.1
