@@ -48,4 +48,13 @@ scrape_applications:
       transform_fn_name: "transform"
       transform_fn_file: "modules.applications_tracking.transform"
       pg_conn_id: "pg_conn"
+      redis_conn_id: "redis_conn"
+      redis_key: "transformed_applications"
       dependencies: [save_raw_data]
+
+    load:
+      operator: operators.Load.LoadOperator
+      pg_conn_id: "pg_conn"
+      redis_conn_id: "redis_conn"
+      redis_key: "transformed_applications"
+      dependencies: [transform]
