@@ -4,7 +4,8 @@ from typing import Dict
 
 from airflow.models import BaseOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.redis.hooks.redis import RedisHook
+
+from modules.utils import load_from_redis
 
 
 class RedisToPostgresOperator(BaseOperator):
@@ -24,18 +25,7 @@ class RedisToPostgresOperator(BaseOperator):
         self.table_name = table_name
 
     def execute(self, context):
-        redis_hook = RedisHook(redis_conn_id=self.redis_conn_id).get_conn()
-
-        with redis_hook.pipeline() as pipe:
-            pipe.get(self.redis_key)
-            pipe.delete(self.redis_key)
-            result = pipe.execute()
-
-        # [0] is get, [1] is delete status
-        value = result[0]
-
-        if value is None:
-            raise ValueError(f"No data found in Redis for key: {self.redis_key}")
+        value = load_from_redis(conn_id=self.redis_conn_id, key=self.redis_key)
 
         value: Dict = json.loads(value)
         cols = ", ".join([str(i) for i in value.keys()])  # column names as a string
