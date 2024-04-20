@@ -28,7 +28,7 @@ class RedisToPostgresOperator(BaseOperator):
         value = load_from_redis(conn_id=self.redis_conn_id, key=self.redis_key)
 
         value: Dict = json.loads(value)
-        cols = ", ".join([str(i) for i in value.keys()])  # column names as a string
+        cols = ", ".join(value.keys())  # column names as a string
         placeholders = ", ".join(["%s"] * len(value))  # placeholders for the values
         values = []
 
