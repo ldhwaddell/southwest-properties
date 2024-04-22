@@ -15,8 +15,8 @@ from modules.scraper.scraper import Scraper
 from modules.utils import generate_hash, clean_whitespace, load_from_redis
 
 
-# Set up logger
 logger = logging.basicConfig(
+# Set up logger
     level=logging.INFO,
     format="%(asctime)s %(name)-8s %(levelname)-8s [%(funcName)s:%(lineno)d] %(message)s",
 )
@@ -273,16 +273,12 @@ def parse_application_row(scraper: Scraper, row: Tag, base_url: str) -> Optional
     return row_data
 
 
-def get_application_urls() -> Dict:
+def get_application_urls() -> Optional[Dict]:
     """
     Scrapes the application URLs and summaries from each row on the planning applications page.
 
-    Args:
-    scraper (Scraper): The scraper instance used for fetching and parsing content.
-    url (str): The URL to scrape.
-
     Returns:
-    Optional[List[Dict]]: A list of dictionaries containing data about each application, or None if an error occurs.
+    Optional[Dict]: A dictionary containing data about the scrape and each application, or None if an error occurs.
     """
     url = "https://www.halifax.ca/business/planning-development/applications"
     redis_hook = RedisHook(redis_conn_id="redis_conn").get_conn()
