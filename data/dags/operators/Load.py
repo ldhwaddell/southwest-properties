@@ -66,11 +66,11 @@ class LoadOperator(BaseOperator):
             for non_active_id in non_active_ids:
                 id = non_active_id["id"]
 
-                # Delete from active applications
+                # Delete from active records
                 delete_query = f"DELETE FROM {self.active_table} WHERE id = %s;"
                 self.cursor.execute(delete_query, (id,))
 
-                # Upsert into archived applications
+                # Upsert into archived records
                 insert_archive_query = f"""
                     INSERT INTO {self.archive_table} (id) VALUES (%s)
                     ON CONFLICT (id) DO UPDATE SET
@@ -81,7 +81,7 @@ class LoadOperator(BaseOperator):
     def add_new(self, id_dict: Dict):
         """
         Finds scraped rows that are not already active. These are new records.
-        Upsert them into the appplications table and add their ID to the active applications table
+        Upsert them into the main table and add their ID to the active table
         """
 
         not_active_query = f"""
@@ -111,7 +111,7 @@ class LoadOperator(BaseOperator):
                     [f"{col} = EXCLUDED.{col}" for col in record.keys()]
                 )
 
-                upsert_application_query = f"""
+                upsert_record_query = f"""
                     INSERT INTO {self.table} ({cols}) VALUES ({placeholders}) 
                     ON CONFLICT (id) DO UPDATE SET {updates};
                 """
@@ -121,8 +121,8 @@ class LoadOperator(BaseOperator):
                     for value in record.values()
                 ]
 
-                # Insert the applications
-                self.cursor.execute(upsert_application_query, tuple(record_values))
+                # Insert the new records
+                self.cursor.execute(upsert_record_query, tuple(record_values))
 
                 # Insert the active ID
                 upsert_id_query = f"""
@@ -134,7 +134,7 @@ class LoadOperator(BaseOperator):
     def update_existing(self, id_dict: Dict):
         """
         Find scraped rows that are already active and check for changes. Save changes to histories table.
-        Updates applications to reflect most recent changes
+        Updates records to reflect most recent changes
         """
 
         already_active_query = f"""
