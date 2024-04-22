@@ -42,6 +42,16 @@ scrape_applications:
       table_name: "scraped_applications"
       dependencies: [get_applications]
 
+    transform:
+      operator: operators.Transform.TransformOperator
+      raw_data_table: "scraped_applications"
+      transform_fn_name: "transform"
+      transform_fn_file: "modules.applications_tracking.transform"
+      pg_conn_id: "pg_conn"
+      redis_conn_id: "redis_conn"
+      redis_key: "transformed_applications"
+      dependencies: [save_raw_data]
+
     load:
       operator: operators.Load.LoadOperator
       pg_conn_id: "pg_conn"
@@ -51,4 +61,4 @@ scrape_applications:
       archive_table: archived_applications
       history_table: application_histories
       table: applications
-      dependencies: [save_raw_data]
+      dependencies: [transform]
