@@ -1,11 +1,14 @@
+from datetime import datetime
 import json
 import logging
+import pendulum
 
 from typing import Dict
 
 from airflow.models import BaseOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 import psycopg2
+import psycopg2.extras
 
 from modules.utils import load_from_redis
 
@@ -22,6 +25,10 @@ class LoadOperator(BaseOperator):
         pg_conn_id,
         redis_conn_id,
         redis_key,
+        active_table,
+        archive_table,
+        history_table,
+        table,
         *args,
         **kwargs,
     ):
@@ -31,14 +38,21 @@ class LoadOperator(BaseOperator):
         self.redis_key = redis_key
         self.pg_hook = PostgresHook(postgres_conn_id=self.pg_conn_id)
         self.conn = self.pg_hook.get_conn()
-        self.cursor = self.conn.cursor()
+        self.cursor = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        self.active_table = active_table
+        self.table = table
+        self.archive_table = archive_table
+        self.history_table = history_table
 
     def archive(self):
-        """Query for scraped active IDs that are NOT in scraped ids (meaning they are now inactive). Archives these records"""
+        """
+        Query for scraped active IDs that are NOT in scraped ids (meaning they are now inactive).
+        Archives these records
+        """
 
-        non_active_query = """
+        non_active_query = f"""
             SELECT a.id
-            FROM active_applications a
+            FROM {self.active_table} a
             LEFT JOIN scraped_ids s ON a.id = s.id
             WHERE s.id IS NULL;
         """
@@ -49,14 +63,16 @@ class LoadOperator(BaseOperator):
             logging.info(f"No records to archive")
         else:
             logging.info(f"Archiving {len(non_active_ids)} records")
-            for (id,) in non_active_ids:
+            for non_active_id in non_active_ids:
+                id = non_active_id["id"]
+
                 # Delete from active applications
-                delete_query = "DELETE FROM active_applications WHERE id = %s;"
+                delete_query = f"DELETE FROM {self.active_table} WHERE id = %s;"
                 self.cursor.execute(delete_query, (id,))
 
                 # Upsert into archived applications
-                insert_archive_query = """
-                    INSERT INTO archived_applications (id) VALUES (%s)
+                insert_archive_query = f"""
+                    INSERT INTO {self.archive_table} (id) VALUES (%s)
                     ON CONFLICT (id) DO UPDATE SET
                     archived_at = CURRENT_TIMESTAMP;
                     """
@@ -64,14 +80,14 @@ class LoadOperator(BaseOperator):
 
     def add_new(self, id_dict: Dict):
         """
-        Finds scrpaed rows that are not already active. These are new records.
+        Finds scraped rows that are not already active. These are new records.
         Upsert them into the appplications table and add their ID to the active applications table
         """
 
-        not_active_query = """
+        not_active_query = f"""
             SELECT s.id
             FROM scraped_ids s
-            LEFT JOIN active_applications a ON s.id = a.id
+            LEFT JOIN {self.active_table} a ON s.id = a.id
             WHERE a.id IS NULL;
         """
         # Insert the the rows
@@ -82,7 +98,9 @@ class LoadOperator(BaseOperator):
             logging.info("No new records to insert")
         else:
             logging.info(f"Inserting {len(not_active_records)} new records")
-            for (id,) in not_active_records:
+            for not_active_record in not_active_records:
+                id = not_active_record["id"]
+
                 # Get the corresponding scraped record
                 record: Dict = id_dict[id]
 
@@ -92,28 +110,37 @@ class LoadOperator(BaseOperator):
                 updates = ", ".join(
                     [f"{col} = EXCLUDED.{col}" for col in record.keys()]
                 )
-                upsert_application_query = (
-                    f"INSERT INTO applications ({cols}) VALUES ({placeholders}) "
-                    f"ON CONFLICT (id) DO UPDATE SET {updates};"
-                )
+
+                upsert_application_query = f"""
+                    INSERT INTO {self.table} ({cols}) VALUES ({placeholders}) 
+                    ON CONFLICT (id) DO UPDATE SET {updates};
+                """
+
+                record_values = [
+                    json.dumps(value) if isinstance(value, (dict, list)) else value
+                    for value in record.values()
+                ]
 
                 # Insert the applications
-                self.cursor.execute(upsert_application_query, tuple(record.values()))
+                self.cursor.execute(upsert_application_query, tuple(record_values))
 
                 # Insert the active ID
-                upsert_id_query = """
-                    INSERT INTO active_applications (id) VALUES (%s) 
+                upsert_id_query = f"""
+                    INSERT INTO {self.active_table} (id) VALUES (%s) 
                     ON CONFLICT (id) DO NOTHING;
                 """
                 self.cursor.execute(upsert_id_query, (id,))
 
     def update_existing(self, id_dict: Dict):
-        """Find scraped rows that are already active and check for changes. Save changes to histories table"""
+        """
+        Find scraped rows that are already active and check for changes. Save changes to histories table.
+        Updates applications to reflect most recent changes
+        """
 
-        already_active_query = """
+        already_active_query = f"""
             SELECT s.id
             FROM scraped_ids s
-            INNER JOIN active_applications a ON s.id = a.id;
+            INNER JOIN {self.active_table} a ON s.id = a.id;
         """
         self.cursor.execute(already_active_query)
         already_active_records = self.cursor.fetchall()
@@ -124,16 +151,61 @@ class LoadOperator(BaseOperator):
             logging.info(
                 f"Found {len(already_active_records)} existing records. Checking for changes"
             )
-            for (id,) in already_active_records:
-                # Get the corresponding scraped record
-                record = id_dict[id]
+            for active_record in already_active_records:
+                id = active_record["id"]
 
-                existing_record_query = "SELECT * FROM applications WHERE id = %s"
+                # Get the corresponding scraped record
+                scraped_record = id_dict[id]
+
+                existing_record_query = f"SELECT * FROM {self.table} WHERE id = %s"
 
                 self.cursor.execute(existing_record_query, (id,))
                 existing_record = self.cursor.fetchone()
 
-                ...
+                updates = {}
+                ignore_fields = set()
+                for key in scraped_record:
+                    if key in ignore_fields or key not in existing_record:
+                        continue
+
+                    existing_value = None
+                    scraped_value = None
+
+                    if isinstance(existing_record[key], datetime):
+                        if pendulum.parse(scraped_record[key]) != existing_record[key]:
+                            updates[key] = scraped_record[key]
+                            existing_value = existing_record[key]
+                            scraped_value = scraped_record[key]
+
+                    elif isinstance(existing_record[key], (list, dict)):
+                        if existing_record[key] != scraped_record[key]:
+                            updates[key] = json.dumps(scraped_record[key])
+                            existing_value = json.dumps(existing_record[key])
+                            scraped_value = json.dumps(scraped_record[key])
+
+                    else:
+                        if scraped_record[key] != existing_record[key]:
+                            updates[key] = scraped_record[key]
+                            existing_value = existing_record[key]
+                            scraped_value = scraped_record[key]
+
+                    if existing_value and scraped_value:
+                        # Record history of changes
+                        insert_history_query = f"INSERT INTO {self.history_table} (existing_record_id, changed, original, updated) VALUES (%s, %s, %s, %s)"
+                        self.cursor.execute(
+                            insert_history_query,
+                            (id, key, existing_value, scraped_value),
+                        )
+
+                # Perform update if any changes found
+                if updates:
+                    logging.info(f"{len(updates)} change(s) found for record {id}")
+                    update_parts = ", ".join([f"{key} = %s" for key in updates.keys()])
+                    update_values = list(updates.values()) + [id]
+                    upsert_existing_record_query = (
+                        f"UPDATE {self.table} SET {update_parts} WHERE id = %s;"
+                    )
+                    self.cursor.execute(upsert_existing_record_query, update_values)
 
     def execute(self, context):
         value = load_from_redis(conn_id=self.redis_conn_id, key=self.redis_key)
@@ -154,8 +226,8 @@ class LoadOperator(BaseOperator):
 
             self.cursor.executemany(insert_query, [(id,) for id in id_dict.keys()])
 
-            self.add_new(id_dict)
             self.update_existing(id_dict)
+            self.add_new(id_dict)
             self.archive()
 
             self.conn.commit()
