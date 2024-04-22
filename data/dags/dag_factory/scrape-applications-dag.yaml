@@ -20,7 +20,7 @@ scrape_applications:
     build_tables:
       operator: airflow.providers.common.sql.operators.sql.SQLExecuteQueryOperator
       conn_id: "pg_conn"
-      sql: sql/scraped_applications_schema.sql
+      sql: sql/application_schemas.sql
 
     get_applications_urls:
       operator: airflow.operators.python_operator.PythonOperator
@@ -57,4 +57,8 @@ scrape_applications:
       pg_conn_id: "pg_conn"
       redis_conn_id: "redis_conn"
       redis_key: "transformed_applications"
+      active_table: active_applications
+      archive_table: archived_applications
+      history_table: application_histories
+      table: applications
       dependencies: [transform]
