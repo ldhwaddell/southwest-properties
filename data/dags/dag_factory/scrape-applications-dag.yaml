@@ -51,4 +51,4 @@ scrape_applications:
       archive_table: archived_applications
       history_table: application_histories
       table: applications
-      dependencies: [transform]
+      dependencies: [save_raw_data]
