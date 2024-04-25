@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup, Tag
 from requests import ConnectionError
 
 from modules.scraper.scraper import Scraper
-from modules.utils import generate_hash, load_from_redis
+from modules.utils import load_from_redis
 
 
 # Set up logger
@@ -154,7 +154,7 @@ def get_building_info(tab: Tag) -> List[Union[Dict, str]]:
                                 .replace(" ", "_")
                                 .replace(":", "")
                             )
-                            value = next_table.get_text(strip=True).replace("\xa0", " ")
+                            value = next_table.get_text(strip=True)
                             building_info.append({key: value})
                             continue
 
@@ -197,37 +197,37 @@ def get_suite_info(tab: Tag) -> Dict[str, List[str]]:
                         suite_info["miscellaneous"].append(td.get_text(strip=True))
 
         # Get all tables, skipping the first if it's the miscellaneous section
-        tables_to_process = tab.find_all("table", recursive=False)
+        tables_to_process: Optional[List[Tag]] = tab.find_all("table", recursive=False)
+
+        if not tables_to_process:
+            raise ValueError("No tables to process")
+
         if miscellaneous:
             tables_to_process = tables_to_process[1:]
 
         # Identify paired tables and collect their information
-        # for i in range(0, len(tables_to_process), 2):
-        #     # Assume tables come in pairs: title, details
-        #     title_table = tables_to_process[i]
+        for i in range(len(tables_to_process)):
+            current_table = tables_to_process[i]
 
-        #     # Check if the next table would be valid
-        #     detail_table = (
-        #         tables_to_process[i + 1] if i + 1 < len(tables_to_process) else None
-        #     )
+            if not current_table.get("bgcolor"):
 
-        #     # The use bgcolor on the details, not the title
-        #     if (
-        #         title_table
-        #         and detail_table
-        #         and not title_table.get("bgcolor")
-        #         and detail_table.get("bgcolor")
-        #     ):
-        #         key = title_table.get_text(strip=True).lower()
-        #         suite_info[key] = [
-        #             td.get_text(strip=True).replace("\xa0", " ")
-        #             for td in detail_table.find_all("td")
-        #         ]
-        #     elif title_table and not title_table.get("bgcolor"):
-        #         # If there's a title table without a detail table following, add contents to miscellaneous
-        #         suite_info["miscellaneous"].append(
-        #             title_table.get_text(strip=True).replace("\xa0", " ")
-        #         )
+                # Then check the next one
+                if i + 1 < len(tables_to_process):
+                    next_table = tables_to_process[i + 1]
+                    if next_table.get("bgcolor"):
+                        key = (
+                            current_table.get_text(strip=True)
+                            .lower()
+                            .replace(" ", "_")
+                            .replace(":", "")
+                        )
+                        all_tds: Optional[List[Tag]] = next_table.find_all("td")
+                        if not all_tds:
+                            continue
+
+                        values = [td.get_text(strip=True) for td in all_tds]
+                        suite_info[key].extend(values)
+                        continue
 
     except Exception as e:
         logging.error(f"Error getting suite info: {e}")
@@ -280,18 +280,18 @@ def get_listings() -> Dict:
     Dict: A dict of the scraped listings
     """
     # Read from redis
-    # redis_hook = RedisHook(redis_conn_id="redis_conn").get_conn()
-    redis_hook = redis.Redis(host="localhost", port=6379)
-    value = redis_hook.get("444rent_data")
+    redis_hook = RedisHook(redis_conn_id="redis_conn").get_conn()
+    # redis_hook = redis.Redis(host="localhost", port=6379)
+    # value = redis_hook.get("444rent_data")
 
-    # value = load_from_redis(conn_id="redis_conn", key="444rent_data")
+    value = load_from_redis(conn_id="redis_conn", key="444rent_data")
     listings_data = json.loads(value)
 
     listings: List[Dict] = listings_data["data"]
 
     scraper = Scraper()
 
-    for listing in listings[:5]:
+    for listing in listings:
 
         try:
             res = scraper.fetch(listing["url"])
@@ -313,6 +313,9 @@ def get_listings() -> Dict:
 
             logging.info(f"Scraped listing: {listing['address']}")
 
+            print(listing)
+            print("\n\n")
+
         except ConnectionError as e:
             logging.error(f"Connection failed for URL: {listing['url']}. Error: {e}")
         except Exception as err:
@@ -320,10 +323,7 @@ def get_listings() -> Dict:
         finally:
             scraper.sleep()
 
-        print(listing)
-        print("\n\n")
-
-    # redis_hook.set("scraped_444rent_listings", json.dumps(listings_data))
+    redis_hook.set("scraped_fffrent_listings", json.dumps(listings_data))
 
 
 def parse_listing_row(scraper: Scraper, row: Tag, bedrooms: str) -> Optional[Dict]:
@@ -368,8 +368,8 @@ def get_listing_urls() -> Optional[Dict]:
     Optional[Dict]: A dictionary containing data about the scrape and each listing, or None if an error occurs.
     """
     url = "https://www.444rent.com/apartments.asp"
-    # redis_hook = RedisHook(redis_conn_id="redis_conn").get_conn()
-    redis_hook = redis.Redis(host="localhost", port=6379)
+    redis_hook = RedisHook(redis_conn_id="redis_conn").get_conn()
+    # redis_hook = redis.Redis(host="localhost", port=6379)
 
     scraper = Scraper()
     data = {"source": url, "ran_at": pendulum.now().to_iso8601_string(), "data": None}
@@ -412,12 +412,3 @@ def get_listing_urls() -> Optional[Dict]:
     except Exception as e:
         logging.error(f"Unknown error occurred fetching: {url}. Error: {e}")
         raise
-
-
-if __name__ == "__main__":
-
-    # get_listing_urls()
-    get_listings()
-    # for d in data:
-    #     print(d)
-    #     print("\n\n")
