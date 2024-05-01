@@ -26,6 +26,7 @@ Aggregate rental data in Nova Scotia
 
 - Better table structure
   - Now have separate tables to keep tracked of scraped records, active records, archived records, the records themself, and changes. See `sql/application_schemas.sql` for the first revision.
+  - Currently creating a master listings table with core fields for the lsiting to have. Extra information that is unique to the listing providers (some sites offer different information) is then aggregated in a unique table for that listing source. See `sql/listings_schemas.sql` and  `sql/444rent_schemas` for current iteration. 
 
 ### Application Sources
 
