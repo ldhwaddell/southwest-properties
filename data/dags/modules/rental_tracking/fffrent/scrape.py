@@ -29,7 +29,7 @@ schema = {
     "address": None,
     "building": None,
     "unit": None,
-    "location": None,
+    "area": None,
     "square_feet": None,
     "available_date": None,
     "price": None,
@@ -348,7 +348,7 @@ def parse_listing_row(scraper: Scraper, row: Tag, bedrooms: str) -> Optional[Dic
     fields = [
         "building",
         "unit",
-        "location",
+        "area",
         "square_feet",
         "available_date",
         "price",
