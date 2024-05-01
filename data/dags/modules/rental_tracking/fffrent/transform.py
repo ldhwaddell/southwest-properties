@@ -1,4 +1,3 @@
-import json
 import logging
 import pendulum
 import re
@@ -151,6 +150,9 @@ def transform(record: Tuple) -> List[Dict]:
         # Generate unique ID
         id_str = str(listing["building"]) + str(listing["unit"])
         listing["id"] = generate_hash(id_str)
+        
+        # Assign record source
+        listing["source"] = source
 
         # Get building name if it exists
         listing["building"] = get_building(listing["building"])
