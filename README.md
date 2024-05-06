@@ -36,15 +36,3 @@ Aggregate rental data in Nova Scotia
   - [halifaxdevelopments.ca](https://halifaxdevelopments.ca/)
 
 ### Rental Sources
-
-- Current
-  - [apartments.com](https://www.apartments.com/halifax-ns/)
-  - [halifaxqualityhomes.com](https://www.halifaxqualityhomes.com/)
-  - [444rent.com](https://www.444rent.com/apartments.asp)
-- Planned
-  - [mosaikproperties.ca](https://mosaikproperties.ca/vacancy/)
-  - [point2homes.com](https://www.point2homes.com/CA/Apartments-For-Rent/NS/Halifax.html)
-  - [capreit.com](https://www.capreit.ca/apartments-for-rent/halifax-ns/)
-  - [the parksofwestbedford.ca](https://www.theparksofwestbedford.ca/rent/)
-  - [killamreit.com](https://killamreit.com/apartments?region=Halifax)
-  - [skylineliving.ca](https://www.skylineliving.ca/en/apartments/nova-scotia/halifax)
