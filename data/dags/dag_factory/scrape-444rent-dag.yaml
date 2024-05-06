@@ -1,0 +1,53 @@
+---
+default:
+  default_args:
+    owner: "airflow"
+    start_date: 2024-01-01
+    retries: 5
+    retry_delay_sec: 300
+  catchup: false
+  concurrency: 1
+  max_active_runs: 1
+  dagrun_timeout_sec: 900
+  default_view: "tree"
+  orientation: "LR"
+  schedule_interval: "@daily"
+
+scrape_444rent:
+  description: "DAG to scrape listing data from 444rent.com and process it"
+  render_template_as_native_obj: True
+  tasks:
+    build_tables:
+      operator: airflow.providers.common.sql.operators.sql.SQLExecuteQueryOperator
+      conn_id: "pg_conn"
+      sql: sql/444rent_schemas.sql
+
+    get_listing_urls:
+      operator: airflow.operators.python_operator.PythonOperator
+      python_callable_name: get_listing_urls
+      python_callable_file: /opt/airflow/dags/modules/rental_tracking/fffrent/scrape.py
+      dependencies: [build_tables]
+
+    get_listings:
+      operator: airflow.operators.python_operator.PythonOperator
+      python_callable_name: get_listings
+      python_callable_file: /opt/airflow/dags/modules/rental_tracking/fffrent/scrape.py
+      dependencies: [get_listing_urls]
+
+    save_raw_data:
+      operator: operators.RedisToPostgres.RedisToPostgresOperator
+      redis_conn_id: "redis_conn"
+      pg_conn_id: "pg_conn"
+      redis_key: "scraped_fffrent_listings"
+      table_name: "scraped_fffrent_listings"
+      dependencies: [get_listings]
+
+    transform:
+      operator: operators.Transform.TransformOperator
+      raw_data_table: "scraped_fffrent_listings"
+      transform_fn_name: "transform"
+      transform_fn_file: "modules.rental_tracking.fffrent.transform"
+      pg_conn_id: "pg_conn"
+      redis_conn_id: "redis_conn"
+      redis_key: "transformed_applications"
+      dependencies: [save_raw_data]
