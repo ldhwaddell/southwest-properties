@@ -1,10 +1,13 @@
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
 import "./globals.css";
 import { Inter as FontSans } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import Header from "@/components/header";
+import Footer from "@/components/footer";
+import { Separator } from "@/components/ui/separator";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -37,7 +40,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <Header />
+            <Separator />
             {children}
+            <Separator />
+            <Footer />
           </ThemeProvider>
           <SpeedInsights />
           <Analytics />

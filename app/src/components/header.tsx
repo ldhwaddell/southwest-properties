@@ -1,16 +1,23 @@
-"use client";
-
-import { Separator } from "@/components/ui/separator";
+import { Nav } from "./nav";
+import { MobileNav } from "./mobile-nav";
 import { ModeToggle } from "@/components/mode-toggle";
 
 export function Header() {
   return (
-    <>
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold">Southwest Data Viewer</h1>
-        <ModeToggle />
+    <header className="sticky top-0 z-50 w-full px-2 border-b border-border bg-background">
+      <div className="mx-auto h-14 flex items-center justify-between">
+        <div className="flex grow-0">
+          <Nav />
+          <MobileNav />
+        </div>
+        <div className="flex grow-0 items-center space-x-2">
+          <nav className="flex items-center">
+            <ModeToggle />
+          </nav>
+        </div>
       </div>
-      <Separator className="mb-2" />
-    </>
+    </header>
   );
 }
+
+export default Header;

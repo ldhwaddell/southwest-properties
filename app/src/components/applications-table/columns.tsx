@@ -3,7 +3,7 @@
 import { Checkbox } from "../ui/checkbox";
 import { DataTableColumnHeader } from "../data-table-components/column-header";
 import { ColumnDef } from "@tanstack/react-table";
-import type { applications } from "@prisma/client";
+import type { Application } from "@/db/utils";
 import { cn } from "@/lib/utils";
 
 type GetValueFunction<T> = (row: T) => string | null | undefined;
@@ -27,7 +27,7 @@ function truncateText<T>(
   );
 }
 
-export const columns: ColumnDef<applications>[] = [
+export const columns: ColumnDef<Application>[] = [
   {
     accessorKey: "id",
     header: ({ table }) => (

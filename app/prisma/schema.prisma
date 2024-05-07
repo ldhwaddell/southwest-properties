@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model active_applications {
+  id           String       @id @db.VarChar(64)
+  applications applications @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model active_listings {
+  id       String   @id @db.VarChar(64)
+  listings listings @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
 model apartments_dot_com_listings {
   id                                    String                                  @id @db.VarChar(7)
   available                             Boolean?
@@ -36,18 +46,17 @@ model apartments_dot_com_listings_histories {
 }
 
 model application_histories {
-  id             Int          @id @default(autoincrement())
-  application_id String       @db.VarChar(64)
-  created_at     DateTime?    @default(now()) @db.Timestamptz(6)
-  changed        String?      @db.VarChar
-  original       String?
-  updated        String?
-  applications   applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                 Int          @id @default(autoincrement())
+  existing_record_id String       @db.VarChar(64)
+  created_at         DateTime?    @default(now()) @db.Timestamptz(6)
+  changed            String?      @db.VarChar
+  original           String?
+  updated            String?
+  applications       applications @relation(fields: [existing_record_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model applications {
   id                                 String                  @id @db.VarChar(64)
-  active                             Boolean?
   created_at                         DateTime?               @default(now()) @db.Timestamptz(6)
   url                                String?                 @db.VarChar
   title                              String?
@@ -59,37 +68,94 @@ model applications {
   process                            String?
   status                             String?
   documents_submitted_for_evaluation String?
-  contact_info                       String?
+  contact_info                       Json?
+  active_applications                active_applications?
   application_histories              application_histories[]
+  archived_applications              archived_applications?
 }
 
-model fourfourfourrent_listings {
-  id                                  String                                @id @db.VarChar(64)
-  available                           Boolean?
-  created_at                          DateTime?                             @default(now()) @db.Timestamptz(6)
-  management                          String?                               @db.VarChar
-  url                                 String?                               @db.VarChar
-  address                             String?                               @db.VarChar
-  building                            String?                               @db.VarChar
-  unit                                String?                               @db.VarChar
-  location                            String?                               @db.VarChar
-  square_feet                         Float?
-  available_date                      String?                               @db.VarChar
-  price                               Float?
-  rooms                               String?                               @db.VarChar
-  leasing_info                        String?
-  description_info                    String?
-  building_info                       String?
-  suite_info                          String?
-  fourfourfourrent_listings_histories fourfourfourrent_listings_histories[]
+model archived_applications {
+  id           String       @id @db.VarChar(64)
+  archived_at  DateTime?    @default(now()) @db.Timestamptz(6)
+  applications applications @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-model fourfourfourrent_listings_histories {
-  id                        Int                       @id @default(autoincrement())
-  listing_id                String                    @db.VarChar(64)
-  created_at                DateTime?                 @default(now()) @db.Timestamptz(6)
-  changed                   String?                   @db.VarChar
-  original                  String?
-  updated                   String?
-  fourfourfourrent_listings fourfourfourrent_listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model archived_listings {
+  id          String    @id @db.VarChar(64)
+  archived_at DateTime? @default(now()) @db.Timestamptz(6)
+  listings    listings  @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model fffrent_listings {
+  id               String    @id @db.VarChar(64)
+  unit             Int?
+  area             String?   @db.VarChar
+  available_date   DateTime? @db.Timestamp(6)
+  management       String?   @db.VarChar
+  den              Boolean?
+  leasing_info     Json?
+  description_info String?
+  building_info    Json?
+  suite_info       Json?
+  listings         listings  @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model listings {
+  id                 String               @id @db.VarChar(64)
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  url                String?              @db.VarChar
+  source             String?              @db.VarChar
+  address            String?              @db.VarChar
+  building           String?              @db.VarChar
+  price              Float?
+  bedrooms           Int?
+  bathrooms          Int?
+  square_feet        Float?
+  active_listings    active_listings?
+  archived_listings  archived_listings?
+  fffrent_listings   fffrent_listings?
+  listings_histories listings_histories[]
+}
+
+model listings_histories {
+  id                 Int       @id @default(autoincrement())
+  existing_record_id String    @db.VarChar(64)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  changed            String?   @db.VarChar
+  original           String?
+  updated            String?
+  listings           listings  @relation(fields: [existing_record_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model scraped_apartments_dot_com_listings {
+  id           String    @id @db.VarChar(7)
+  available    Boolean?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  url          String?   @db.VarChar
+  address      String?   @db.VarChar
+  building     String?   @db.VarChar
+  monthly_rent String?   @db.VarChar
+  bedrooms     String?   @db.VarChar
+  bathrooms    String?   @db.VarChar
+  square_feet  String?   @db.VarChar
+  about        String?
+  description  String?
+  amenities    String?
+  fees         String?
+}
+
+model scraped_applications {
+  id         Int       @id @default(autoincrement())
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  source     String?   @db.VarChar(255)
+  ran_at     DateTime? @db.Timestamptz(6)
+  data       Json?
+}
+
+model scraped_fffrent_listings {
+  id         Int       @id @default(autoincrement())
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  source     String?   @db.VarChar(255)
+  ran_at     DateTime? @db.Timestamptz(6)
+  data       Json?
 }

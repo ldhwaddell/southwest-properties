@@ -94,6 +94,9 @@ export function ApplicationsDataTable<TData, TValue>({
     },
   });
 
+
+  
+
   return (
     <>
       <DataTableToolbar
@@ -107,7 +110,7 @@ export function ApplicationsDataTable<TData, TValue>({
       />
       <div className="rounded-md border">
         {/* Modify h-full to make table take up entire screen but not more */}
-        <div className="h-[55vh] relative overflow-auto">
+        <div className="h-[calc(100vh_-152px)] relative overflow-auto">
           <Table>
             <TableHeader className="sticky top-0 bg-secondary">
               {table.getHeaderGroups().map((headerGroup) => (
