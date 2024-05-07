@@ -17,30 +17,30 @@ scrape_444rent:
   description: "DAG to scrape listing data from 444rent.com and process it"
   render_template_as_native_obj: True
   tasks:
-    build_tables:
-      operator: airflow.providers.common.sql.operators.sql.SQLExecuteQueryOperator
-      conn_id: "pg_conn"
-      sql: sql/444rent_schemas.sql
+    # build_tables:
+    #   operator: airflow.providers.common.sql.operators.sql.SQLExecuteQueryOperator
+    #   conn_id: "pg_conn"
+    #   sql: sql/444rent_schemas.sql
 
-    get_listing_urls:
-      operator: airflow.operators.python_operator.PythonOperator
-      python_callable_name: get_listing_urls
-      python_callable_file: /opt/airflow/dags/modules/rental_tracking/fffrent/scrape.py
-      dependencies: [build_tables]
+    # get_listing_urls:
+    #   operator: airflow.operators.python_operator.PythonOperator
+    #   python_callable_name: get_listing_urls
+    #   python_callable_file: /opt/airflow/dags/modules/rental_tracking/fffrent/scrape.py
+    #   dependencies: [build_tables]
 
-    get_listings:
-      operator: airflow.operators.python_operator.PythonOperator
-      python_callable_name: get_listings
-      python_callable_file: /opt/airflow/dags/modules/rental_tracking/fffrent/scrape.py
-      dependencies: [get_listing_urls]
+    # get_listings:
+    #   operator: airflow.operators.python_operator.PythonOperator
+    #   python_callable_name: get_listings
+    #   python_callable_file: /opt/airflow/dags/modules/rental_tracking/fffrent/scrape.py
+    #   dependencies: [get_listing_urls]
 
-    save_raw_data:
-      operator: operators.RedisToPostgres.RedisToPostgresOperator
-      redis_conn_id: "redis_conn"
-      pg_conn_id: "pg_conn"
-      redis_key: "scraped_fffrent_listings"
-      table_name: "scraped_fffrent_listings"
-      dependencies: [get_listings]
+    # save_raw_data:
+    #   operator: operators.RedisToPostgres.RedisToPostgresOperator
+    #   redis_conn_id: "redis_conn"
+    #   pg_conn_id: "pg_conn"
+    #   redis_key: "scraped_fffrent_listings"
+    #   table_name: "scraped_fffrent_listings"
+    #   dependencies: [get_listings]
 
     transform:
       operator: operators.Transform.TransformOperator
@@ -49,5 +49,15 @@ scrape_444rent:
       transform_fn_file: "modules.rental_tracking.fffrent.transform"
       pg_conn_id: "pg_conn"
       redis_conn_id: "redis_conn"
-      redis_key: "transformed_applications"
-      dependencies: [save_raw_data]
+      redis_key: "transformed_fffrent_listings"
+      # dependencies: [save_raw_data]
+
+    load:
+      operator: operators.LoadListings.LoadListingsOperator
+      pg_conn_id: "pg_conn"
+      redis_conn_id: "redis_conn"
+      redis_key: "transformed_fffrent_listings"
+      source: "444rent"
+      dependencies: [transform]
+
+    
