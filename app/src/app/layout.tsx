@@ -8,6 +8,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import { Separator } from "@/components/ui/separator";
+import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "@/components/ui/toaster";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -26,30 +28,34 @@ export default function RootLayout({
 }>) {
   return (
     <>
-      <html lang="en" suppressHydrationWarning>
-        <head />
-        <body
-          className={cn(
-            "min-h-screen bg-background font-sans antialiased",
-            fontSans.variable
-          )}
-        >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
+      <ClerkProvider>
+        <html lang="en" suppressHydrationWarning>
+          <head />
+          <body
+            className={cn(
+              "min-h-screen bg-background font-sans antialiased",
+              fontSans.variable
+            )}
           >
-            <Header />
-            <Separator />
-            {children}
-            <Separator />
-            <Footer />
-          </ThemeProvider>
-          <SpeedInsights />
-          <Analytics />
-        </body>
-      </html>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <Header />
+              <Separator />
+              {children}
+              <Separator />
+              <Footer />
+              <Toaster />
+            </ThemeProvider>
+            <SpeedInsights />
+            <Analytics />
+            <Toaster />
+          </body>
+        </html>
+      </ClerkProvider>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { Nav } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { ModeToggle } from "@/components/mode-toggle";
+import Auth from "./auth";
 
 export function Header() {
   return (
@@ -11,7 +12,8 @@ export function Header() {
           <MobileNav />
         </div>
         <div className="flex grow-0 items-center space-x-2">
-          <nav className="flex items-center">
+          <nav className="flex items-center gap-3">
+            <Auth />
             <ModeToggle />
           </nav>
         </div>
